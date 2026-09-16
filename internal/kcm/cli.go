@@ -25,7 +25,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 		}
 		return nil
 	}
-	root := &cobra.Command{Use: "kcm", Short: "Kubernetes profiles and contexts scoped to your shell", Long: "Choose Kubernetes profiles and contexts for this shell. Source kubeconfigs are shared; context selection uses environment variables and shell wrappers. Expiry resets an interactive shell to local and cancels an Enter-submitted command at a stale prompt.", SilenceUsage: true, SilenceErrors: true, Args: cobra.NoArgs}
+	root := &cobra.Command{Use: "kcm", Short: "Kubernetes profiles and contexts scoped to your shell", Long: "Choose Kubernetes profiles and contexts for this shell. Source kubeconfigs are shared; context selection uses environment variables and the kcmkubectl, kcmhelm, and kcmk9s shell wrappers. Expiry resets an interactive shell to local and cancels an Enter-submitted command at a stale prompt.", SilenceUsage: true, SilenceErrors: true, Args: cobra.NoArgs}
 	root.PersistentFlags().StringVar(&path, "settings", path, "Settings file (also KCM_SETTINGS)")
 	root.CompletionOptions.DisableDefaultCmd = true
 	contextCmd := &cobra.Command{Use: "context [name|-]", Aliases: []string{"ctx"}, Short: "Select a context in this profile; omit name for fzf", Long: "Select a context for this shell without writing current-context to the source file. Use '-' to return to the previous context. Duplicate names require --file or interactive selection.", Args: cobra.MaximumNArgs(1), Example: "  kcm context\n  kcm ctx kind-local\n  kcm context customer-a --file ~/.kube/prod/customer.yaml"}
@@ -94,7 +94,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 	}}
 	root.AddCommand(profile)
 	var createNamespace bool
-	namespace := &cobra.Command{Use: "namespace [name]", Aliases: []string{"ns"}, Short: "Choose a shared namespace, or create one and switch to it", Long: "Update the namespace in the selected source kubeconfig. Other shells using that same context will see the change. Without a name, list existing namespaces with fzf, including a 'Create new namespace…' choice. --create creates a namespace in the selected cluster before switching; omit its name to prompt. A name without --create only updates the config and does not contact the cluster. Failed creation or cancellation leaves the selection unchanged.", Args: cobra.MaximumNArgs(1), Example: "  kcm ns\n  kcm ns itrs\n  kcm ns feature-demo --create\n  kcm ns --create", RunE: func(cmd *cobra.Command, args []string) error {
+	namespace := &cobra.Command{Use: "namespace [name]", Aliases: []string{"ns"}, Short: "Choose a shared namespace, or create one and switch to it", Long: "Update the namespace in the selected source kubeconfig. Other shells using that same context will see the change. Without a name, list existing namespaces with fzf, including a 'Create new namespace…' choice. --create creates a namespace in the selected cluster before switching; omit its name to prompt. A name without --create only updates the config and does not contact the cluster. Failed creation or cancellation leaves the selection unchanged.", Args: cobra.MaximumNArgs(1), Example: "  kcm ns\n  kcm ns app\n  kcm ns feature-demo --create\n  kcm ns --create", RunE: func(cmd *cobra.Command, args []string) error {
 		s, e := load()
 		if e != nil {
 			return e
@@ -276,7 +276,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 		return nil
 	}})
 	root.AddCommand(settings)
-	root.AddCommand(&cobra.Command{Use: "init <zsh|bash>", Short: "Print shell integration (source it in your startup file)", Args: cobra.ExactArgs(1), ValidArgs: []string{"zsh", "bash"}, Example: "  eval \"$(kcm init zsh)\"\n  eval \"$(kcm init bash)\"", RunE: func(cmd *cobra.Command, args []string) error {
+	root.AddCommand(&cobra.Command{Use: "init <zsh|bash>", Short: "Print shell integration (source it in your startup file)", Long: "Initialize shell-local selection and expiry hooks, plus kcmkubectl, kcmhelm, and kcmk9s functions that pass the selected context to their client. Standard client commands, aliases, and functions are preserved. Source this output in your shell startup file.", Args: cobra.ExactArgs(1), ValidArgs: []string{"zsh", "bash"}, Example: "  eval \"$(kcm init zsh)\"\n  eval \"$(kcm init bash)\"", RunE: func(cmd *cobra.Command, args []string) error {
 		p, e := expandPath(path)
 		if e != nil {
 			return e

@@ -199,14 +199,14 @@ func TestSwitchPreservesSourceAndDeadline(t *testing.T) {
 	}
 	t.Setenv("KCM_CONTEXT", "two")
 	t.Setenv("KCM_FILE", path)
-	if e := s.namespace("itrs", false, &bytes.Buffer{}); e != nil {
+	if e := s.namespace("app", false, &bytes.Buffer{}); e != nil {
 		t.Fatal(e)
 	}
 	c, e := readConfig(path)
 	if e != nil {
 		t.Fatal(e)
 	}
-	if c.Contexts["two"].Namespace != "itrs" || c.Contexts["one"].Namespace != "original" || c.CurrentContext != "one" {
+	if c.Contexts["two"].Namespace != "app" || c.Contexts["one"].Namespace != "original" || c.CurrentContext != "one" {
 		t.Fatalf("namespace changed wrong context: %+v", c)
 	}
 }

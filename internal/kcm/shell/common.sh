@@ -29,21 +29,21 @@ kcm() {
 
 # Context flags only: these wrappers do not gate commands or check timeouts.
 # Explicit flags supplied by the caller take precedence.
-kubectl() {
+kcmkubectl() {
     if [ -n "${KCM_CONTEXT:-}" ]; then
         command kubectl --context "$KCM_CONTEXT" "$@"
     else
         command kubectl "$@"
     fi
 }
-helm() {
+kcmhelm() {
     if [ -n "${KCM_CONTEXT:-}" ]; then
         command helm --kube-context "$KCM_CONTEXT" "$@"
     else
         command helm "$@"
     fi
 }
-k9s() {
+kcmk9s() {
     if [ -n "${KCM_CONTEXT:-}" ]; then
         command k9s --context "$KCM_CONTEXT" "$@"
     else

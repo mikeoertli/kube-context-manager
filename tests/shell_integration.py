@@ -166,7 +166,14 @@ def check_isolation(executable, kind, binary, settings, base, root):
         a.command("export PATH=" + shlex.quote(str(fakebin)) + ":$PATH")
         for client, flag in [("kubectl", "--context"), ("helm", "--kube-context"), ("k9s", "--context")]:
             a.command(client + " get pods > " + shlex.quote(str(a_state)))
-            assert a_state.read_text().splitlines()[:3] == [str(config), flag, "remote"]
+            assert a_state.read_text().splitlines() == [str(config), "get", "pods"], "Standard client was wrapped"
+            a.command("kcm" + client + " get pods > " + shlex.quote(str(a_state)))
+            assert a_state.read_text().splitlines() == [str(config), flag, "remote", "get", "pods"]
+            b.command("export PATH=" + shlex.quote(str(fakebin)) + ":$PATH")
+            b.command("kcm" + client + " get pods > " + shlex.quote(str(b_state)))
+            assert b_state.read_text().splitlines() == [str(config), flag, "second", "get", "pods"]
+            a.command("kcm" + client + " " + flag + " override 'two words' > " + shlex.quote(str(a_state)))
+            assert a_state.read_text().splitlines() == [str(config), flag, "remote", flag, "override", "two words"]
         a.command("kcm ns shared-test")
         a.command("kcm status > " + shlex.quote(str(a_state)))
         assert "shared-test" in a_state.read_text()
@@ -178,7 +185,24 @@ def check_isolation(executable, kind, binary, settings, base, root):
         a.command("kcm profile missing-profile")
         a.command("printf '%s' \"$KCM_PROFILE\" > " + shlex.quote(str(a_state)))
         assert a_state.read_text() == "prod"
-        print("PASS", kind, "two-shell isolation, shared source, client context flags, namespace, child reset, errors")
+        a.command("kcm clear")
+        for client in ["kubectl", "helm", "k9s"]:
+            a.command("kcm" + client + " version > " + shlex.quote(str(a_state)))
+            assert a_state.read_text().splitlines() == ["/dev/null", "version"]
+        # Reinitializing preserves pre-existing client functions and aliases.
+        for client in ["kubectl", "helm", "k9s"]:
+            a.command(client + "() { printf 'user-function'; }")
+            a.command("alias " + client + "='printf user-alias'")
+        a.command('eval "$(' + shlex.quote(str(binary)) + ' init ' + kind + ')"')
+        for client in ["kubectl", "helm", "k9s"]:
+            a.command(client + " > " + shlex.quote(str(a_state)))
+            assert a_state.read_text() == "user-alias"
+            a.command("unalias " + client)
+            a.command(client + " > " + shlex.quote(str(a_state)))
+            assert a_state.read_text() == "user-function"
+            a.command("kcm" + client + " version > " + shlex.quote(str(a_state)))
+            assert a_state.read_text().splitlines() == ["/dev/null", "version"]
+        print("PASS", kind, "two-shell isolation, prefixed wrappers, standard clients/aliases/functions preserved, namespace, child reset, errors")
     finally:
         a.close()
         b.close()
@@ -251,7 +275,7 @@ def check_picker(executable, binary, settings, base, root, fzf):
             "users": [{"name": "old", "user": {"token": "fixture"}}],
             "contexts": [{"name": "old", "context": {"cluster": "old", "user": "old"}}], "current-context": "old"}))
         original = source.read_bytes()
-        shell.send("kcm install " + shlex.quote(str(source)) + " --profile other --rename-cluster cluster --rename-user user --rename-context readable --namespace itrs --filename wizard.yaml --copy")
+        shell.send("kcm install " + shlex.quote(str(source)) + " --profile other --rename-cluster cluster --rename-user user --rename-context readable --namespace app --filename wizard.yaml --copy")
         output = shell.drain(0.5)
         assert b"Install? (yes/no)" in output, output
         shell.send("yes")

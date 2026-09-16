@@ -12,8 +12,9 @@ are single-quoted and escaped. Cancelling a selector or encountering an error
 applies no assignments. Other commands run as ordinary Go processes.
 
 The source file's `current-context` remains untouched by selection. Small shell
-functions for `kubectl`, `helm`, and `k9s` supply the selected context flag. They
-do not check timeouts. Explicit caller flags take precedence. Normal namespace
+functions named `kcmkubectl`, `kcmhelm`, and `kcmk9s` supply the selected context
+flag to `kubectl`, `helm`, and `k9s`, respectively. They do not check timeouts.
+Explicit caller flags take precedence. Normal namespace
 changes update the selected context's namespace in the shared source file.
 
 Noninteractive child processes inherit the environment but generally do not
@@ -21,8 +22,11 @@ inherit shell functions. Use `kcm exec -- kubectl ...`, `kcm exec -- helm ...`, 
 `kcm exec -- k9s ...` in scripts, or pass the relevant context flag yourself.
 For arbitrary clients, use `KCM_CONTEXT` with that client's context option.
 `KUBECONFIG` alone does not convey KCM's selection within a multi-context file.
-The same applies to `command kubectl`, absolute client paths, and tools that
-read the source file's current-context directly.
+Standard `kubectl`, `helm`, and `k9s` commands are not wrapped or replaced, and
+existing aliases and functions keep their definitions. These commands, absolute
+client paths, and tools that read the source file's current-context directly
+use that stored context unless explicitly told otherwise. The prefixed wrappers
+invoke the client executable through `command`, bypassing shell functions.
 
 Profile directories do not inherit from each other. Scanning never merges all
 profiles, changes existing source configs, or classifies and moves existing

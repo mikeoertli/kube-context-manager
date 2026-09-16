@@ -40,16 +40,16 @@ login shell sources that file. Open a new shell after setup.
 ## Everyday use
 
 ```sh
-kcm                         # fuzzy-select a local context
-kcm profile                 # fuzzy-select a profile for this shell
-kcm profile prod            # or select explicitly
+kcm                          # fuzzy-select a local context
+kcm profile                  # fuzzy-select a profile for this shell
+kcm profile prod             # or select explicitly
 kcm context customer-a
-kubectl get pods             # shell wrapper supplies --context customer-a
-helm list                    # wrapper supplies --kube-context customer-a
-k9s                          # wrapper supplies --context customer-a
+kcmkubectl get pods           # supplies --context customer-a
+kcmhelm list                  # supplies --kube-context customer-a
+kcmk9s                        # supplies --context customer-a
 kcm ns                       # choose an existing namespace or create a new one
-kcm ns itrs                  # update this context's shared namespace
-kcm ns feature-demo --create # create in the selected cluster, then switch
+kcm ns app                   # update this context's shared namespace
+kcm ns feature-demo --create  # create in the selected cluster, then switch
 kcm status                   # profile, context, namespace, expiry
 kcm profile local            # explicitly leave production
 ```
@@ -58,6 +58,15 @@ Every new shell starts in `local`, including a new interactive child shell.
 Changing profiles clears the context. **Choose a context before using a client.**
 With no selection, `KUBECONFIG=/dev/null` prevents fallback to a shared default
 config. Selecting a context sets `KUBECONFIG` to its source file.
+
+Use `kcmkubectl`, `kcmhelm`, and `kcmk9s` to pass this shell's selected context
+to the corresponding client. KCM does not define or replace `kubectl`, `helm`,
+or `k9s` commands, aliases, or functions. Those commands still inherit
+`KUBECONFIG`, but use the source file's `current-context` unless you supply an
+explicit context flag. In scripts, use `kcm exec -- kubectl ...` (or `helm`/`k9s`).
+
+If upgrading from the unprefixed wrappers, open a fresh shell after rebuilding
+or reinstalling KCM; existing shells retain their previously loaded functions.
 
 | Profile | Default directory | Default timeout |
 | --- | --- | --- |
@@ -98,7 +107,7 @@ kcm install ./customer.yaml --profile prod \
   --rename-cluster customer-a \
   --rename-user customer-a-support-ro \
   --rename-context customer-a \
-  --namespace itrs --no-prompt
+  --namespace app --no-prompt
 
 kcm install ./local.yaml --no-prompt        # local endpoint: defaults to local
 kcm install ./remote.yaml --profile other --no-prompt --move
@@ -221,9 +230,11 @@ context and timeout; namespace remains available through `kcm status`.
 | `kcm init SHELL`, `kcm completion SHELL` | Generate integration and completions |
 | `kcm settings init`, `kcm settings path` | Create or locate settings |
 | `kcm exec -- CLIENT ARGS` | Pass the selected context to kubectl, helm, or k9s |
+| `kcmkubectl`, `kcmhelm`, `kcmk9s` | Shell wrappers that pass the selected context to each client |
 | `kcm version`, `kcm help [COMMAND]` | Version and help |
 
-Every command supports `--help`. Aliases: `ctx`, `ns`. See
+Every `kcm` command supports `--help`; wrapper arguments pass through to the client.
+Aliases: `ctx`, `ns`. See
 [complete command help](docs/commands.md) and [behavior details](docs/design.md).
 
 ## Development
