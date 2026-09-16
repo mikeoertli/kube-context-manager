@@ -134,6 +134,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 	}}
 	contexts.Flags().BoolVar(&namesOnly, "names", false, "Print only context names")
 	root.AddCommand(contexts)
+	root.AddCommand(listCommand(load))
 	root.AddCommand(&cobra.Command{Use: "profiles", Short: "List profile directories and default timeouts", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		s, e := load()
 		if e != nil {

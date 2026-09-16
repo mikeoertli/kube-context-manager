@@ -7,7 +7,7 @@ import sys
 
 root = pathlib.Path(__file__).resolve().parents[1]
 binary = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / "bin/kcm"
-commands = ["", "profile", "context", "namespace", "contexts", "profiles", "status",
+commands = ["", "profile", "context", "namespace", "list", "contexts", "profiles", "status",
             "clear", "renew", "install", "waive", "waivers", "unwaive", "doctor",
             "init", "completion", "settings", "settings init", "settings path",
             "prompt", "permissions", "can-i", "exec", "version", "help"]

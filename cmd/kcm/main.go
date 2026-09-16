@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"os"
 
+	project "github.com/mikeoertli/kube-context-manager"
 	"github.com/mikeoertli/kube-context-manager/internal/kcm"
 )
 
-var version = "0.1.0-dev"
-
 func main() {
-	if err := kcm.NewCommand(version).Execute(); err != nil {
+	if err := kcm.NewCommand(project.Version()).Execute(); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(os.Stderr, "kcm:", err)
 		}

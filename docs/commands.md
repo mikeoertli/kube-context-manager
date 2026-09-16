@@ -22,6 +22,7 @@ Available Commands:
   help        Help about any command
   init        Print shell integration (source it in your startup file)
   install     Import a kubeconfig, with optional readable names and copy/move
+  list        List discovered contexts grouped by profile, with current selections marked
   namespace   Choose a shared namespace, or create one and switch to it
   permissions Inspect live permissions in one namespace; never cached
   profile     Change this shell's profile; omit name for fzf
@@ -106,6 +107,24 @@ Examples:
 Flags:
       --create   Create in the selected cluster, then switch (prompts for name if omitted)
   -h, --help     help for namespace
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+```
+
+## `kcm list`
+
+```text
+List contexts in every configured profile, including empty profiles. Show namespaces, servers, and source paths. Mark the effective global context used by standard clients with '*' and this shell's KCM selection with '>'. Global selection follows KUBECONFIG merge precedence, or ~/.kube/config when unset; saved defaults in inactive files are not marked. Reads local configs only; does not switch profiles, modify configs, run credential helpers, or query permissions.
+
+Usage:
+  kcm list [flags]
+
+Examples:
+  kcm list
+
+Flags:
+  -h, --help   help for list
 
 Global Flags:
       --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")

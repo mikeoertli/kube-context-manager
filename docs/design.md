@@ -108,3 +108,24 @@ subresource. The client pins the source file and context explicitly. These check
 run only on request, do not cache permissions or discovery, and never change
 selection, namespaces, or expiry. Listing, selection, and prompt code does not
 invoke them. See [permission checks](permissions.md) for output and exit codes.
+
+## Listing every profile
+
+`kcm list` validates the root and scans each configured directory, starting with
+local and then other profiles alphabetically. It shows empty profiles and uses
+the same non-recursive discovery and waiver rules as the selector. Listing other
+profiles does not expose them to the current shell's selector or change selection.
+
+The `*` marker follows standard kubeconfig loading: `KUBECONFIG` file precedence,
+or `~/.kube/config` if the variable is unset or empty. It matches the winning
+context definition's source path as well as its name, so duplicate names do not
+highlight unrelated contexts. This global selection is the stored context used
+by a standard client without explicit overrides; it can differ from the KCM
+selection (`>`). A saved current-context in an inactive file is not marked.
+If the effective context is outside the discovered directories, or KUBECONFIG is
+`/dev/null`, no global row is marked. Invalid external global config produces a
+warning while still displaying the discovered inventory. Invalid discovered
+configs fail listing with an error identifying the profile.
+
+The global-config loader does not perform legacy file migration, authenticate,
+or execute credential helpers. All markers remain plain text for redirected output.

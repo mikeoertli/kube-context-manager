@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.1.0-dev — Work in progress
+## 0.2.0 — in progress
+
+- Embed the application version from `VERSION` for every build path.
+- Add `kcm list` with contexts grouped by profile and global/shell selection markers.
+
+## 0.1.0 — 2026-09-16
 
 - Add on-demand `permissions` summaries and `can-i` action checks without caching.
 

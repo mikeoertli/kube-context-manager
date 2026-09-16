@@ -28,6 +28,8 @@ Ensure the Go bin directory is on `PATH`. On macOS, `brew install go fzf` provid
 the dependencies; `brew install bash` provides a modern bash if desired. Apple's
 bundled bash 3.2 does not support KCM's Enter-time expiry integration.
 
+### Shell integration (required for session switching and timeouts)
+
 Add this **after shell plugins and keybindings** in `~/.zshrc`:
 
 ```sh
@@ -37,7 +39,39 @@ eval "$(kcm init zsh)"
 For bash, use `eval "$(kcm init bash)"` in `~/.bashrc` and ensure your interactive
 login shell sources that file. Open a new shell after setup.
 
+`kcm init zsh` **prints shell code**. The surrounding `eval "$(...)"` runs that
+code in your current shell. This is necessary because an ordinary executable
+cannot change its parent shell's environment variables.
+
+Evaluating the integration:
+
+- Starts the shell in `local`, clears its context and timeout, and sets
+  `KUBECONFIG=/dev/null` until you select a context.
+- Defines a `kcm` shell function so profile/context changes, `clear`, and `renew`
+  can update this shell's environment.
+- Defines `kcmkubectl`, `kcmhelm`, and `kcmk9s` to pass the selected context to
+  those clients. Standard client commands are not replaced.
+- Installs prompt and Enter-key hooks for expiry reset and command cancellation.
+- Runs `kcm doctor --quiet` to check local settings and configs without contacting
+  a cluster.
+
+It does not install tab completion. Running `kcm init zsh` without `eval` only
+displays the code; it does not initialize the shell or edit your startup file.
+Evaluating it again resets that shell to `local` with no context selected.
+
+Standalone commands such as `kcm list`, `kcm install`, and `kcm settings init`
+can run without shell integration. Profile/context switching and interactive
+timeouts require it.
+
 ## Everyday use
+
+Use `kcm list` to list discovered contexts across all configured profiles. Each
+section shows its directory, contexts, namespaces, servers, and source files;
+empty profiles are included. `*` marks the effective global context that standard
+clients would use (`KUBECONFIG`, or `~/.kube/config` when unset). `>` marks this
+shell's KCM selection; `*>` means both selections match. Markers also work in
+redirected output. The command only reads local files and does not query clusters
+or permissions. `kcm contexts` continues to list only the current profile.
 
 ```sh
 kcm                          # fuzzy-select a local context
@@ -212,15 +246,36 @@ eval "$(kcm --settings /path/to/settings.toml init zsh)"
 
 ## Completions and Starship
 
-Zsh (after `compinit`) or bash:
+### Tab completion (optional)
+
+Completion teaches the shell which commands, flags, profiles, and contexts to
+suggest when you press **Tab**, such as after `kcm profile `. It does not initialize
+KCM, select a profile/context, or install expiry hooks.
+
+Add this to `~/.zshrc` after `compinit` (usually run by your shell framework):
 
 ```sh
 source <(kcm completion zsh)
-# source <(kcm completion bash)
 ```
 
-Completion includes profile names, context names, and flags. Fish and PowerShell
-completion generation is also available; session integration supports zsh/bash.
+For bash, add `source <(kcm completion bash)` to `~/.bashrc`.
+`kcm completion zsh` prints completion code; `source <(...)` loads it into the
+current shell. Put both setup lines in your startup file if you want session
+integration and completion:
+
+```sh
+# ~/.zshrc — after plugins, keybindings, and compinit
+eval "$(kcm init zsh)"          # Session state, client wrappers, expiry hooks
+source <(kcm completion zsh)    # Tab completion only
+```
+
+Fish and PowerShell completion generation is also available; session integration
+supports zsh/bash.
+
+### Starship (optional display)
+
+Starship displays KCM's exported shell state. It does not replace initialization
+or provide KCM tab completion.
 
 For Starship, use the [suggested config block](docs/starship.md) or copy
 [examples/starship.toml](examples/starship.toml) into your `~/.config/starship.toml`.
@@ -239,6 +294,7 @@ context and timeout; namespace remains available through `kcm status`.
 | `kcm`, `kcm context [name\|-]` | Select a context; `-` returns to the previous one |
 | `kcm profile [name]` | Select this shell's profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |
+| `kcm list` | List contexts grouped by profile, marking global and shell selections |
 | `kcm contexts`, `kcm profiles` | List available contexts or profiles |
 | `kcm permissions [CONTEXT] [--details]` | Inspect live permissions for one namespace |
 | `kcm can-i VERB RESOURCE` | Check one API action without executing it |
@@ -267,8 +323,10 @@ python3 tests/shell_integration.py ./bin/kcm --bash /path/to/modern/bash --fzf /
 
 Tests use temporary fixture configs and do not contact a Kubernetes cluster.
 Go dependencies are pinned in `go.mod` and verified by the committed `go.sum`.
-`VERSION` tracks the development version. No GitHub Actions, release jobs, or
-tagging workflow are included.
+`VERSION` is the sole source of the application's version, embedded at compile
+time for Make builds and direct `go build`, `go install`, or `go run` commands.
+Update that file and rebuild to change the reported version. No GitHub Actions,
+release jobs, or tagging workflow are included.
 
 ## Related
 

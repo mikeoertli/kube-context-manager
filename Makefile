@@ -1,11 +1,10 @@
 GO ?= go
-VERSION := $(shell cat VERSION)
 
 .PHONY: build install test check deps
 build:
-	$(GO) build -ldflags '-X main.version=$(VERSION)' -o bin/kcm ./cmd/kcm
+	$(GO) build -o bin/kcm ./cmd/kcm
 install:
-	$(GO) install -ldflags '-X main.version=$(VERSION)' ./cmd/kcm
+	$(GO) install ./cmd/kcm
 deps:
 	$(GO) mod tidy
 test:
