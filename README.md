@@ -111,9 +111,13 @@ or reinstalling KCM; existing shells retain their previously loaded functions.
 | 🌐 `other` | `~/.kube/other/` | Disabled |
 
 Directories are scanned non-recursively. Hidden files, subdirectories, backup
-files ending in `~` or `.bak`, and certificate/key files (`.pem`, `.crt`, `.key`)
-are excluded. Other regular files must be valid kubeconfigs. Symlinked files
-must resolve within their profile directory.
+files ending in `~` or `.bak`, certificate/key files (`.pem`, `.crt`, `.key`),
+and documentation (`README`, `LICENSE`, `NOTICE`, `.md`, `.markdown`, `.rst`)
+are excluded. Other unrelated files, including ordinary YAML/JSON documents,
+are ignored. Kubeconfigs are recognized by their contents or conventional names
+(`config`, `kubeconfig`, `*.kubeconfig`, `kubeconfig.*`); malformed recognized
+configs still produce an error. Symlinked files must resolve within their
+profile directory.
 
 ### Returning home after a timeout
 

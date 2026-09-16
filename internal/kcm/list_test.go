@@ -177,7 +177,7 @@ func TestListValidationAndDefaultNamespace(t *testing.T) {
 	if err = os.MkdirAll(filepath.Dir(bad), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(bad, []byte("invalid: ["), 0600); err != nil {
+	if err = os.WriteFile(bad, []byte("kind: Config\ncontexts: ["), 0600); err != nil {
 		t.Fatal(err)
 	}
 	out, err = run(t, "list")

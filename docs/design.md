@@ -88,8 +88,13 @@ root files may contain non-local contexts only with explicit waivers. All root
 contexts must pass validation, even when selecting another profile, so malformed
 or misplaced configs remain visible rather than silently disappearing.
 
-Discovery skips hidden files, directories, backup suffixes, and certificate/key
-extensions. Place other ancillary files in subdirectories. Symlinked files
+Discovery skips hidden files, directories, backup suffixes, certificate/key
+extensions, and documentation names/extensions. Other files are considered only
+if their contents identify a kubeconfig (`kind: Config` or top-level kubeconfig
+fields), or their filename is `config`, `kubeconfig`, `*.kubeconfig`, or
+`kubeconfig.*`. Unrelated text, YAML, and JSON are ignored. Recognizable malformed
+kubeconfigs still fail validation; explicit imports always parse strictly.
+Symlinked files
 must resolve inside the mapped directory; mapping a directory that is itself
 a symlink is supported. The local profile must map to `.`.
 

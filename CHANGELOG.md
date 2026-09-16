@@ -2,6 +2,8 @@
 
 ## 0.2.0 — in progress
 
+- Ignore documentation and unrelated files during kubeconfig discovery.
+
 - Embed the application version from `VERSION` for every build path.
 - Add `kcm list` with contexts grouped by profile and global/shell selection markers.
 

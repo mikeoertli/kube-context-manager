@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"k8s.io/client-go/tools/clientcmd"
 	api "k8s.io/client-go/tools/clientcmd/api"
+	"sigs.k8s.io/yaml"
 )
 
 type Context struct {
@@ -25,11 +27,44 @@ func discoverableFile(name string) bool {
 	if strings.HasPrefix(name, ".") || strings.HasSuffix(name, "~") {
 		return false
 	}
+	switch strings.ToLower(name) {
+	case "readme", "license", "notice":
+		return false
+	}
 	switch strings.ToLower(filepath.Ext(name)) {
-	case ".pem", ".crt", ".key", ".bak":
+	case ".pem", ".crt", ".key", ".bak", ".md", ".markdown", ".rst":
 		return false
 	}
 	return true
+}
+
+var kubeconfigYAMLField = regexp.MustCompile(`(?m)^(?:["']?(?:clusters|contexts|users|current-context)["']?[ \t]*:|["']?kind["']?[ \t]*:[ \t]*["']?Config\b)`)
+var kubeconfigJSONField = regexp.MustCompile(`"(?:clusters|contexts|users|current-context)"\s*:|"kind"\s*:\s*"Config"`)
+
+// Discovery is permissive about ancillary files, but recognizable kubeconfigs
+// still go through strict parsing and reference validation. Explicit imports
+// call readConfig directly and never use this discovery-only classification.
+func looksLikeKubeconfig(name string, data []byte) bool {
+	name = strings.ToLower(name)
+	if name == "config" || name == "kubeconfig" || strings.HasSuffix(name, ".kubeconfig") || strings.HasPrefix(name, "kubeconfig.") {
+		return true
+	}
+	var document map[string]any
+	if err := yaml.Unmarshal(data, &document); err == nil {
+		for _, key := range []string{"clusters", "contexts", "users", "current-context"} {
+			if _, ok := document[key]; ok {
+				return true
+			}
+		}
+		kind, _ := document["kind"].(string)
+		return kind == "Config"
+	}
+	// Preserve errors for truncated or malformed configs whose identifying fields
+	// remain readable, even when their filename has no conventional extension.
+	if strings.HasPrefix(strings.TrimSpace(string(data)), "{") {
+		return kubeconfigJSONField.Match(data)
+	}
+	return kubeconfigYAMLField.Match(data)
 }
 
 func readConfig(path string) (*api.Config, error) {
@@ -84,6 +119,13 @@ func scanDir(dir string) ([]Context, error) {
 		}
 		if !within(path, dir) {
 			return nil, fmt.Errorf("%s: symlink points outside profile directory", path)
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if !looksLikeKubeconfig(name, data) {
+			continue
 		}
 		c, err := readConfig(path)
 		if err != nil {
