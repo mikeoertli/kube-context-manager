@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" alt="kube_context_manager project icon" width="400" height="400">
+  <img src="assets/icon.png" alt="kube-context-manager project icon" width="400" height="400">
 </p>
 
 # kube-context-manager (`kcm`)
@@ -18,8 +18,8 @@ Requires Go 1.25+, [fzf](https://github.com/junegunn/fzf), and zsh or bash 4.4+.
 `kubectl` is needed for namespace discovery. No gum or yq dependency.
 
 ```sh
-git clone https://github.com/mikeoertli/kube_context_manager.git
-cd kube_context_manager
+git clone https://github.com/mikeoertli/kube-context-manager.git
+cd kube-context-manager
 make install                     # installs kcm to GOBIN or GOPATH/bin
 kcm settings init                # optional; built-in defaults also work
 ```

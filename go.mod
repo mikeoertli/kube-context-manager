@@ -1,4 +1,4 @@
-module github.com/mikeoertli/kube_context_manager
+module github.com/mikeoertli/kube-context-manager
 
 go 1.25.0
 

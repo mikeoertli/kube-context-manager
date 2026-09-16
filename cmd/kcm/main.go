@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mikeoertli/kube_context_manager/internal/kcm"
+	"github.com/mikeoertli/kube-context-manager/internal/kcm"
 )
 
 var version = "0.1.0-dev"
