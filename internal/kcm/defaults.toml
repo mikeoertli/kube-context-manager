@@ -1,0 +1,30 @@
+# ~/.config/kcm/kcm_settings.toml
+kube_root = "~/.kube"
+# Loopback IPs and localhost are always local. No DNS lookups are performed.
+local_hosts = [] # e.g. ["kubernetes.docker.internal"]
+local_cidrs = [] # e.g. ["192.168.49.2/32"] for a particular Minikube IP
+
+# Direct files only; profile subdirectories are never merged implicitly.
+# Relative directories resolve beneath kube_root. Absolute paths also work.
+# timeout = "0" disables expiry. Omitted: 8h for prod or files in kube_root/prod,
+# otherwise disabled. A configured timeout overrides that fallback.
+[profiles.local]
+dir = "."
+emoji = "🏠"
+
+[profiles.dev]
+dir = "dev"
+emoji = "🛠️"
+
+[profiles.qa]
+dir = "qa"
+emoji = "🧪"
+
+[profiles.prod]
+dir = "prod"
+emoji = "🚨"
+timeout = "8h"
+
+[profiles.other]
+dir = "other"
+emoji = "🌐"

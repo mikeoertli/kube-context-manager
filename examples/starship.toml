@@ -1,0 +1,55 @@
+# Merge into ~/.config/starship.toml; replace your existing [kubernetes] block.
+# Remove an older [custom.kcm] block to avoid showing KCM twice.
+# With a custom top-level format, include $custom (before any table headers).
+
+[kubernetes]
+disabled = true
+
+# Default directory: ~/.kube/ (direct files only)
+[custom.kcm_local]
+when = 'test "${KCM_PROFILE:-}" = local'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "dimmed green"
+
+# Default directory: ~/.kube/dev/
+[custom.kcm_dev]
+when = 'test "${KCM_PROFILE:-}" = dev'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "yellow"
+
+# Default directory: ~/.kube/qa/
+[custom.kcm_qa]
+when = 'test "${KCM_PROFILE:-}" = qa'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "bold bright-red"
+
+# Default directory: ~/.kube/prod/
+[custom.kcm_prod]
+when = 'test "${KCM_PROFILE:-}" = prod'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "bold #ff00ff"
+
+# Default directory: ~/.kube/other/
+[custom.kcm_other]
+when = 'test "${KCM_PROFILE:-}" = other'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "bold #ff8700"
+
+# Any additional named profile, such as support, perf, or nightly.
+[custom.kcm_fallback]
+when = 'case "${KCM_PROFILE:-}" in ""|local|dev|qa|prod|other) exit 1 ;; *) exit 0 ;; esac'
+command = "kcm prompt"
+shell = ["sh"]
+format = '[$output]($style) '
+style = "bold yellow"
+

@@ -1,0 +1,96 @@
+# Behavior and boundaries
+
+## Shared files, isolated selection
+
+KCM stores profile selection, context name, source path, previous selection, and
+an absolute expiry timestamp in the shell environment. It does not create a
+session directory, copy kubeconfigs, or start a daemon.
+
+The public `kcm` shell function captures shell assignments for `profile`,
+`context`, `clear`, and `renew`, and applies them to its own shell. Assignments
+are single-quoted and escaped. Cancelling a selector or encountering an error
+applies no assignments. Other commands run as ordinary Go processes.
+
+The source file's `current-context` remains untouched by selection. Small shell
+functions for `kubectl`, `helm`, and `k9s` supply the selected context flag. They
+do not check timeouts. Explicit caller flags take precedence. Normal namespace
+changes update the selected context's namespace in the shared source file.
+
+Noninteractive child processes inherit the environment but generally do not
+inherit shell functions. Use `kcm exec -- kubectl ...`, `kcm exec -- helm ...`, or
+`kcm exec -- k9s ...` in scripts, or pass the relevant context flag yourself.
+For arbitrary clients, use `KCM_CONTEXT` with that client's context option.
+`KUBECONFIG` alone does not convey KCM's selection within a multi-context file.
+The same applies to `command kubectl`, absolute client paths, and tools that
+read the source file's current-context directly.
+
+Profile directories do not inherit from each other. Scanning never merges all
+profiles, changes existing source configs, or classifies and moves existing
+files automatically. Files may contain multiple contexts. Identical context
+names in different files are disambiguated by source path in the switcher or
+`kcm context NAME --file PATH`.
+
+## Timeout lifecycle
+
+1. A new interactive shell starts in local with no selection.
+2. Selecting a timed context sets an absolute Unix timestamp in
+   `KCM_EXPIRES_AT`.
+3. Context changes retain an earlier unexpired deadline if the newly selected
+   context is timed. Untimed selections clear the timer.
+4. `kcm renew` applies the current profile settings and restarts the deadline.
+5. Switching profiles or clearing selection clears the timer.
+6. Expiry clears context, file, previous selection, and deadline, sets profile
+   to local, and sets `KUBECONFIG=/dev/null`.
+
+Zsh wraps the `accept-line` ZLE widget. Bash uses a readline macro that runs a
+`bind -x` function before `accept-line`. If the deadline has passed, the handler
+clears the complete line and prints a cancellation notice. This avoids running
+either part of a semicolon list or a pipeline after a stale production prompt.
+Prompt hooks also reset after an already-running command finishes.
+
+This is intentionally a reminder for an interactive shell. It does not stop
+long-running commands, revoke tokens, police explicit `--kubeconfig` flags, or
+intercept scripts. Time is wall-clock time, so it includes sleep/overnight time
+and follows system-clock adjustments. Load KCM after plugins that change Enter
+bindings. Custom widgets and alternate execution bindings that bypass the normal
+Enter handler are outside this behavior. For bash, Ctrl-X Ctrl-K and Ctrl-X
+Ctrl-J are reserved for the check/accept macro.
+
+KCM does not restore the pre-KCM `KUBECONFIG` when returning to local: that value
+could point at production. An empty selection consistently uses `/dev/null`.
+
+## Imports and validation
+
+Kubeconfigs are decoded and written using Kubernetes' Go client library.
+Parsing does not execute credential plugins. Interactive namespace discovery
+and namespace creation invoke kubectl, which can invoke the selected config's
+auth plugin. The namespace picker lists existing namespaces and offers a
+creation action. `kcm ns NAME --create` creates in the explicitly selected
+context before updating the shared config. Creation failure or cancellation
+leaves the selection unchanged. If creation succeeds but writing the config
+fails, KCM reports that the namespace exists and selection failed; it does not
+delete the newly created namespace. A name without `--create` only updates the
+config and does not contact the cluster.
+
+Imported files are published only once fully written, using exclusive creation
+to avoid overwriting an existing file. Sources are left untouched for copies.
+Move operations refuse a partial multi-context import and symlink sources. They
+check that the source contents have not changed during the wizard and archive
+the original before deleting it. Certificate/key files are embedded. Token-file
+and executable references are made absolute, not copied or removed.
+
+Imports into the root must contain only locally classified endpoints. Existing
+root files may contain non-local contexts only with explicit waivers. All root
+contexts must pass validation, even when selecting another profile, so malformed
+or misplaced configs remain visible rather than silently disappearing.
+
+Discovery skips hidden files, directories, backup suffixes, and certificate/key
+extensions. Place other ancillary files in subdirectories. Symlinked files
+must resolve inside the mapped directory; mapping a directory that is itself
+a symlink is supported. The local profile must map to `.`.
+
+Writes use mode 0600 and new directories mode 0700. Existing directory modes are
+not altered. Namespace writes replace the shared file atomically, so readers
+see complete YAML. Like other kubeconfig editors, simultaneous writers can
+overwrite each other's changes; avoid editing a source with multiple tools at
+once. KCM is not a lock or credential isolation boundary.
