@@ -2,6 +2,8 @@
 
 ## 0.2.0 — in progress
 
+- Support external kubeconfig symlinks using their profile link paths.
+
 - Ignore documentation and unrelated files during kubeconfig discovery.
 
 - Embed the application version from `VERSION` for every build path.

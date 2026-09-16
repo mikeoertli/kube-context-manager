@@ -116,8 +116,29 @@ and documentation (`README`, `LICENSE`, `NOTICE`, `.md`, `.markdown`, `.rst`)
 are excluded. Other unrelated files, including ordinary YAML/JSON documents,
 are ignored. Kubeconfigs are recognized by their contents or conventional names
 (`config`, `kubeconfig`, `*.kubeconfig`, `kubeconfig.*`); malformed recognized
-configs still produce an error. Symlinked files must resolve within their
-profile directory.
+configs still produce an error.
+
+### Kubeconfigs maintained in repositories
+
+Symlink a repo-managed kubeconfig into the desired profile directory:
+
+```sh
+ln -s ~/repos/cluster-configs/customer.yaml ~/.kube/prod/customer.yaml
+kcm profile prod
+kcm context customer-a --file ~/.kube/prod/customer.yaml
+```
+
+KCM uses the **link's location** for profile membership, discovery names, timeout
+classification, selection, and waivers. The target can be outside `~/.kube`.
+`KUBECONFIG` and `KCM_FILE` retain the link path, and two links to the same target
+remain distinct selectable entries. Broken links produce an error; directory
+links are not scanned recursively.
+
+Namespace changes update the shared target file and preserve the symlink, so
+those edits also appear in the repository. Relative certificate/token paths
+follow the standard client's rules and are relative to the link's directory;
+use embedded data or absolute paths for configs whose supporting files live
+in the repository. Non-local configs linked into the root still require a waiver.
 
 ### Returning home after a timeout
 
@@ -238,8 +259,9 @@ kcm unwaive deliberately-local-tunnel
 ```
 
 Waivers live in `kube_root/.kcm_waivers` as readable JSON. Each binds to the
-context name, canonical source path, and server address. Changing any of those
-requires a new waiver. Discovery never relocates files automatically.
+context name, absolute source path (the link path for symlinks), and server
+address. Changing any of those requires a new waiver. Discovery never relocates
+files automatically.
 
 Use `KCM_SETTINGS=/path/to/settings.toml` or `--settings PATH` for alternate
 settings. For a shell that always uses an alternate file:

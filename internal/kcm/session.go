@@ -207,5 +207,6 @@ func saveNamespace(c Context, name string) error {
 	if err != nil {
 		return err
 	}
+	// Replace the target atomically so the profile entry remains a symlink.
 	return atomicWrite(canonical(c.File), b, true)
 }

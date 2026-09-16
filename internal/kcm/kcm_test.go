@@ -316,8 +316,8 @@ func TestDryRunLocalAndSymlinks(t *testing.T) {
 	if e := os.Symlink(source, filepath.Join(s.Root, "prod", "escape")); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := s.contexts("prod"); e == nil {
-		t.Fatal("cross-profile symlink accepted")
+	if cs, e := s.contexts("prod"); e != nil || len(cs) != 1 || cs[0].File != filepath.Join(s.Root, "prod", "escape") {
+		t.Fatalf("external symlink not discovered through its profile path: %+v, %v", cs, e)
 	}
 }
 

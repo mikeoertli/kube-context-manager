@@ -241,7 +241,7 @@ Global Flags:
 ## `kcm waive`
 
 ```text
-Allow a non-local context at the kube root. Waivers are stored in kube_root/.kcm_waivers and bind to a context name, canonical file path, and exact server address. Use --file for duplicate names.
+Allow a non-local context at the kube root. Waivers are stored in kube_root/.kcm_waivers and bind to a context name, absolute file path (the link path for symlinks), and exact server address. Use --file for duplicate names.
 
 Usage:
   kcm waive <context> [flags]
@@ -272,7 +272,7 @@ Global Flags:
 ## `kcm unwaive`
 
 ```text
-Remove a non-local root waiver. Waivers are stored in kube_root/.kcm_waivers and bind to a context name, canonical file path, and exact server address. Use --file for duplicate names.
+Remove a non-local root waiver. Waivers are stored in kube_root/.kcm_waivers and bind to a context name, absolute file path (the link path for symlinks), and exact server address. Use --file for duplicate names.
 
 Usage:
   kcm unwaive <context> [flags]

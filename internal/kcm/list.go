@@ -58,10 +58,10 @@ func printProfileContexts(out io.Writer, s *Settings, groups []profileContexts, 
 		fmt.Fprintln(w, "  \tCONTEXT\tNAMESPACE\tSERVER\tFILE")
 		for _, c := range group.contexts {
 			marker := ""
-			if globalName != "" && c.Name == globalName && canonical(c.File) == canonical(globalFile) {
+			if globalName != "" && c.Name == globalName && configPath(c.File) == configPath(globalFile) {
 				marker += "*"
 			}
-			if group.name == currentProfile() && c.Name == os.Getenv("KCM_CONTEXT") && os.Getenv("KCM_FILE") != "" && canonical(c.File) == canonical(os.Getenv("KCM_FILE")) {
+			if group.name == currentProfile() && c.Name == os.Getenv("KCM_CONTEXT") && os.Getenv("KCM_FILE") != "" && configPath(c.File) == configPath(os.Getenv("KCM_FILE")) {
 				marker += ">"
 			}
 			ns := c.Namespace

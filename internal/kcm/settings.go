@@ -131,6 +131,16 @@ func (s *Settings) dir(name string) (string, error) {
 	return expandPath(d)
 }
 
+// configPath identifies a configured path without resolving symlinks. Profile
+// membership, selection, and waivers belong to the link, not its target.
+func configPath(p string) string {
+	if absolute, err := filepath.Abs(p); err == nil {
+		return absolute
+	}
+	return filepath.Clean(p)
+}
+
+// canonical resolves physical targets for writes and import collision checks.
 func canonical(p string) string {
 	if real, err := filepath.EvalSymlinks(p); err == nil {
 		return real
@@ -139,7 +149,7 @@ func canonical(p string) string {
 }
 
 func within(path, dir string) bool {
-	rel, err := filepath.Rel(canonical(dir), canonical(path))
+	rel, err := filepath.Rel(configPath(dir), configPath(path))
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 

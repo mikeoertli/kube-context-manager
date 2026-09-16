@@ -94,9 +94,20 @@ if their contents identify a kubeconfig (`kind: Config` or top-level kubeconfig
 fields), or their filename is `config`, `kubeconfig`, `*.kubeconfig`, or
 `kubeconfig.*`. Unrelated text, YAML, and JSON are ignored. Recognizable malformed
 kubeconfigs still fail validation; explicit imports always parse strictly.
-Symlinked files
-must resolve inside the mapped directory; mapping a directory that is itself
-a symlink is supported. The local profile must map to `.`.
+Symlinked kubeconfigs may point outside the mapped directory. Profile membership,
+selection matching, timeout classification, and waiver identity use the absolute
+link path without resolving its target. Multiple links to one target remain
+separate entries. Mapped profile directories may also be symlinks. Broken links
+produce errors; links to directories are not recursively scanned. The local
+profile must map to `.`.
+
+`KCM_FILE`, `KUBECONFIG`, list output, and client calls retain the link path.
+Namespace edits resolve the physical target only for the atomic write, preserving
+the symlink and updating the shared repo file. Relative credential file references
+are resolved by clients relative to the link's directory; KCM does not rewrite
+those references. Root waivers bind to the link path, context, and server; they
+do not apply automatically to other links to the same target. Legacy waivers
+that recorded a resolved symlink target must be recreated for the link.
 
 Writes use mode 0600 and new directories mode 0700. Existing directory modes are
 not altered. Namespace writes replace the shared file atomically, so readers
@@ -123,9 +134,10 @@ profiles does not expose them to the current shell's selector or change selectio
 
 The `*` marker follows standard kubeconfig loading: `KUBECONFIG` file precedence,
 or `~/.kube/config` if the variable is unset or empty. It matches the winning
-context definition's source path as well as its name, so duplicate names do not
-highlight unrelated contexts. This global selection is the stored context used
-by a standard client without explicit overrides; it can differ from the KCM
+context definition's absolute source path (without resolving symlinks) as well
+as its name, so duplicate names do not highlight unrelated contexts. This global
+selection is the stored context used by a standard client without explicit
+overrides; it can differ from the KCM
 selection (`>`). A saved current-context in an inactive file is not marked.
 If the effective context is outside the discovered directories, or KUBECONFIG is
 `/dev/null`, no global row is marked. Invalid external global config produces a

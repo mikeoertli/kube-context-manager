@@ -117,9 +117,6 @@ func scanDir(dir string) ([]Context, error) {
 		if !info.Mode().IsRegular() {
 			continue
 		}
-		if !within(path, dir) {
-			return nil, fmt.Errorf("%s: symlink points outside profile directory", path)
-		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, err
@@ -152,7 +149,7 @@ type Waiver struct {
 }
 
 func fingerprint(c Context) string {
-	h := sha256.Sum256([]byte(c.Name + "\x00" + canonical(c.File) + "\x00" + c.Server))
+	h := sha256.Sum256([]byte(c.Name + "\x00" + configPath(c.File) + "\x00" + c.Server))
 	return hex.EncodeToString(h[:])
 }
 
@@ -210,7 +207,7 @@ func (s *Settings) contexts(profile string) ([]Context, error) {
 func selectContext(contexts []Context, name, file string) (Context, error) {
 	var found []Context
 	for _, c := range contexts {
-		if c.Name == name && (file == "" || canonical(c.File) == canonical(file)) {
+		if c.Name == name && (file == "" || configPath(c.File) == configPath(file)) {
 			found = append(found, c)
 		}
 	}

@@ -403,7 +403,7 @@ func addWaivers(root *cobra.Command, load func() (*Settings, error)) {
 		if name == "unwaive" {
 			short = "Remove a non-local root waiver"
 		}
-		c := &cobra.Command{Use: name + " <context>", Short: short, Long: short + ". Waivers are stored in kube_root/.kcm_waivers and bind to a context name, canonical file path, and exact server address. Use --file for duplicate names.", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		c := &cobra.Command{Use: name + " <context>", Short: short, Long: short + ". Waivers are stored in kube_root/.kcm_waivers and bind to a context name, absolute file path (the link path for symlinks), and exact server address. Use --file for duplicate names.", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 			s, e := load()
 			if e != nil {
 				return e
@@ -435,11 +435,11 @@ func addWaivers(root *cobra.Command, load func() (*Settings, error)) {
 						return nil
 					}
 				}
-				ws = append(ws, Waiver{c.Name, canonical(c.File), c.Server, fingerprint(c)})
+				ws = append(ws, Waiver{c.Name, configPath(c.File), c.Server, fingerprint(c)})
 			} else {
 				kept := make([]Waiver, 0, len(ws))
 				for _, w := range ws {
-					if w.Context != args[0] || (file != "" && canonical(file) != w.File) {
+					if w.Context != args[0] || (file != "" && configPath(file) != w.File) {
 						kept = append(kept, w)
 					}
 				}
