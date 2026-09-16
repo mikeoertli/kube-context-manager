@@ -2,6 +2,8 @@
 
 ## 0.1.0-dev — Work in progress
 
+- Add on-demand `permissions` summaries and `can-i` action checks without caching.
+
 - Name client wrappers `kcmkubectl`, `kcmhelm`, and `kcmk9s` to preserve standard commands.
 - Add Go CLI, profile-scoped discovery, fzf selection, and shared namespace edits.
 - Add zsh/bash integration with Enter-time expiry reset and command cancellation.

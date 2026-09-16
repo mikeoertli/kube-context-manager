@@ -146,6 +146,24 @@ unchanged. `kcm ns NAME` only changes the shared config; it neither creates a
 namespace nor checks whether it exists. All namespace switches remain shared
 between shells using that source context.
 
+## Permissions on demand
+
+```sh
+kcm permissions                          # live summary for the selected context
+kcm permissions customer-a -n app        # inspect without switching contexts
+kcm permissions --details                # full returned rules and restrictions
+kcm can-i delete deployments.apps -n app
+kcm can-i get pods/my-pod --subresource log -n app
+kcm can-i list nodes --context customer-a
+```
+
+Checks run only when requested, with no caching or automatic picker/prompt queries.
+They use the current profile's contexts and leave shell selection and kubeconfigs
+unchanged. Summaries identify their namespace and preserve resource-name restrictions;
+incomplete results are labeled. `can-i` exits `0` for allowed, `1` for not allowed,
+and `2` for a failed or inconclusive check. See [permission checks](docs/permissions.md)
+for scope, options, and limitations.
+
 ## Settings and local-only checks
 
 The settings file is `~/.config/kcm/kcm_settings.toml`. See the complete
@@ -222,6 +240,8 @@ context and timeout; namespace remains available through `kcm status`.
 | `kcm profile [name]` | Select this shell's profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |
 | `kcm contexts`, `kcm profiles` | List available contexts or profiles |
+| `kcm permissions [CONTEXT] [--details]` | Inspect live permissions for one namespace |
+| `kcm can-i VERB RESOURCE` | Check one API action without executing it |
 | `kcm status`, `kcm prompt` | Detailed status or compact prompt output |
 | `kcm clear`, `kcm renew` | Clear selection or restart its timer |
 | `kcm install PATH` | Import, rename, copy, or move configs |
@@ -249,3 +269,7 @@ Tests use temporary fixture configs and do not contact a Kubernetes cluster.
 Go dependencies are pinned in `go.mod` and verified by the committed `go.sum`.
 `VERSION` tracks the development version. No GitHub Actions, release jobs, or
 tagging workflow are included.
+
+## Related
+
+Check out my new Kubernetes resource monitor TUI too – [`krm` (kube-resource-monitor)](https://github.com/mikeoertli/kube-resource-monitor).

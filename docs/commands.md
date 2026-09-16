@@ -12,6 +12,7 @@ Usage:
   kcm [command]
 
 Available Commands:
+  can-i       Check a live API permission without executing the action
   clear       Clear the selected context, keeping this shell's profile
   completion  Print shell completions, including profile/context names
   context     Select a context in this profile; omit name for fzf
@@ -22,6 +23,7 @@ Available Commands:
   init        Print shell integration (source it in your startup file)
   install     Import a kubeconfig, with optional readable names and copy/move
   namespace   Choose a shared namespace, or create one and switch to it
+  permissions Inspect live permissions in one namespace; never cached
   profile     Change this shell's profile; omit name for fzf
   profiles    List profile directories and default timeouts
   prompt      Print compact profile/context information for Starship
@@ -375,6 +377,58 @@ Usage:
 
 Flags:
   -h, --help   help for prompt
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+```
+
+## `kcm permissions`
+
+```text
+Query the inspected context's SelfSubjectRulesReview on demand. Omit the context to use this shell's selection. Named contexts must be in the current profile; use --file for duplicate names. Does not switch contexts or modify kubeconfigs. The compact table preserves resource-name restrictions; --details prints the full returned status as JSON. Incomplete results are labeled: missing rules then mean unknown, not denied. No cache, automatic checks, or picker queries.
+
+Usage:
+  kcm permissions [context] [flags]
+
+Examples:
+  kcm permissions
+  kcm permissions customer-a -n app
+  kcm permissions --details
+
+Flags:
+      --details                    Print the full returned rule status as JSON after the scope header
+      --file string                Disambiguate by source kubeconfig path within this profile
+  -h, --help                       help for permissions
+  -n, --namespace string           Namespace (default: inspected context's namespace, or default)
+      --request-timeout duration   Timeout for the live check; must be positive (default 10s)
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+```
+
+## `kcm can-i`
+
+```text
+Use SelfSubjectAccessReview to check one action with the inspected context's credentials. Resource names, singular names, and short names are resolved through live API discovery. Use --subresource for log, exec, or another subresource. Cluster-scoped resources are detected automatically; -A checks a namespaced action across all namespaces. Does not execute the action, switch context, or cache results. Prints yes or no: exit 0 means allowed, 1 means not allowed, 2 means the check failed or is inconclusive. An allowed result does not guarantee that admission policies or other execution requirements will permit the actual operation.
+
+Usage:
+  kcm can-i <verb> <resource[.group][/name]> [flags]
+
+Examples:
+  kcm can-i list pods -n app
+  kcm can-i delete deployments.apps --context customer-a -n app
+  kcm can-i get pods/my-pod --subresource log -n app
+  kcm can-i list nodes
+  kcm can-i list pods -A
+
+Flags:
+  -A, --all-namespaces             Check the action across all namespaces
+      --context string             Inspect a context in this profile without switching
+      --file string                Disambiguate by source kubeconfig path within this profile
+  -h, --help                       help for can-i
+  -n, --namespace string           Namespace (default: inspected context's namespace, or default)
+      --request-timeout duration   Timeout for the live check; must be positive (default 10s)
+      --subresource string         Check a subresource, such as log or exec
 
 Global Flags:
       --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")

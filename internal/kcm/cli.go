@@ -107,6 +107,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 	}}
 	namespace.Flags().BoolVar(&createNamespace, "create", false, "Create in the selected cluster, then switch (prompts for name if omitted)")
 	root.AddCommand(namespace)
+	root.AddCommand(permissionsCommand(load), canICommand(load))
 	var namesOnly bool
 	contexts := &cobra.Command{Use: "contexts", Short: "List available contexts, servers, namespaces, and source files", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		s, e := load()

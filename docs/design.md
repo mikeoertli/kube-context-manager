@@ -98,3 +98,13 @@ not altered. Namespace writes replace the shared file atomically, so readers
 see complete YAML. Like other kubeconfig editors, simultaneous writers can
 overwrite each other's changes; avoid editing a source with multiple tools at
 once. KCM is not a lock or credential isolation boundary.
+
+## Permission inspection
+
+`kcm permissions` sends a SelfSubjectRulesReview for the inspected namespace.
+`kcm can-i` performs live discovery to resolve the resource and scope, then sends
+a SelfSubjectAccessReview for the exact verb, resource, optional name, and
+subresource. The client pins the source file and context explicitly. These checks
+run only on request, do not cache permissions or discovery, and never change
+selection, namespaces, or expiry. Listing, selection, and prompt code does not
+invoke them. See [permission checks](permissions.md) for output and exit codes.
