@@ -1,7 +1,12 @@
 # Merge into ~/.config/starship.toml; replace your existing [kubernetes] block.
 # Remove ALL old [custom.kcm*] blocks so their shell commands stop running.
-# With a custom top-level format, include $env_var (before any table headers).
+# With a custom top-level format, include $env_var or explicit ${env_var.kcm_*}
+# module names where KCM should appear. Top-level keys go before table headers.
 # Requires the updated `kcm init zsh` / `kcm init bash` shell integration.
+# Custom colors need both a module here and its profile in KCM_STARSHIP_PROFILES.
+# Example shell setting: export KCM_STARSHIP_PROFILES='local dev qa prod other perf'
+# Add the matching perf module from docs/starship.md before using that setting.
+# Do not set `default`: missing variables hide inactive profiles.
 
 [kubernetes]
 disabled = true

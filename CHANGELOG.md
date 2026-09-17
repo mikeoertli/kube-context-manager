@@ -3,7 +3,7 @@
 ## 0.2.1 — in progress
 
 - Use native Starship environment-variable modules to avoid prompt subprocess timeouts.
-- Document migration, conditional display, and custom profile colors using generic examples.
+- Document migration, conditional display, custom profile colors, and a two-line Starship layout using generic examples.
 
 ## 0.2.0 — 2026-09-17
 

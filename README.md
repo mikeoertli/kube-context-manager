@@ -310,7 +310,8 @@ It replaces the built-in `[kubernetes]` module and old context/user regex rules
 with styles based on the profile-to-directory mapping: local green, dev yellow,
 qa red, prod magenta, and other orange, with a fallback for custom profiles.
 
-The guide covers custom prompt placement, emoji overrides, and migration from
+The guide covers a two-line layout with KCM on the right, custom profile colors,
+emoji overrides, and migration from
 the previous `[custom.kcm*]` snippets. Native `env_var` modules display the
 shell-selected context and countdown without starting prompt subprocesses.
 Namespace remains available through `kcm status`.

@@ -35,8 +35,13 @@ without needing `prod` in its name.
 ```toml
 # Merge into ~/.config/starship.toml; replace your existing [kubernetes] block.
 # Remove ALL old [custom.kcm*] blocks so their shell commands stop running.
-# With a custom top-level format, include $env_var (before any table headers).
+# With a custom top-level format, include $env_var or explicit ${env_var.kcm_*}
+# module names where KCM should appear. Top-level keys go before table headers.
 # Requires the updated `kcm init zsh` / `kcm init bash` shell integration.
+# Custom colors need both a module here and its profile in KCM_STARSHIP_PROFILES.
+# Example shell setting: export KCM_STARSHIP_PROFILES='local dev qa prod other perf'
+# Add the matching perf module from docs/starship.md before using that setting.
+# Do not set `default`: missing variables hide inactive profiles.
 
 [kubernetes]
 disabled = true
@@ -109,6 +114,56 @@ ${env_var.kcm_local}${env_var.kcm_dev}${env_var.kcm_qa}${env_var.kcm_prod}${env_
 Top-level `format` belongs before table headers in TOML. Keep the rest of your
 existing prompt format; the snippet does not replace it.
 
+You can keep `$env_var` elsewhere in the format while placing KCM modules
+explicitly. Starship excludes explicitly placed modules from that aggregate,
+so they appear once. `$custom` is separate: it does not display these `env_var`
+modules.
+
+### Two-line layout with KCM on the right
+
+Use `$fill` to push KCM to the right of the information line, with the input
+prompt on the line below. This is useful when the profile, context, and countdown
+need a predictable location alongside directory and Git information.
+
+This is an optional minimal layout. Merge it with the module blocks above;
+replace your existing top-level `format` rather than adding a second one.
+Keep top-level keys before any table headers, and add the schema key only if
+it is not already present. The schema enables editor validation and completion.
+
+```toml
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$directory$git_branch$git_status$env_var\
+$fill\
+${env_var.kcm_local}\
+${env_var.kcm_dev}\
+${env_var.kcm_qa}\
+${env_var.kcm_prod}\
+${env_var.kcm_other}\
+${env_var.kcm_fallback}\
+$cmd_duration\
+$line_break$character"""
+
+right_format = ''
+
+[fill]
+symbol = ' '
+```
+
+The `$env_var` on the left keeps other environment-variable modules there;
+the explicitly listed KCM modules appear after `$fill`. Add other modules
+on either side as desired. The trailing backslashes join the TOML lines;
+`$line_break` creates the actual prompt newline.
+
+`$fill` and `right_format` serve different layouts: `$fill` aligns content on
+the information line above the input, while `right_format` places a separate
+right prompt on the input line. This example leaves `right_format` empty.
+Fill uses the remaining terminal width, so long paths or context names can
+still crowd a narrow terminal; shorten the directory display or remove less
+useful modules if needed. See Starship's [fill module](https://starship.rs/config/#fill)
+and [right-prompt guide](https://starship.rs/advanced-config/#enable-right-prompt).
+
 ### Symbols, namespace, and timeout
 
 Emoji come from `kcm_settings.toml`, so Starship and `kcm profiles` agree.
@@ -160,8 +215,21 @@ profile selection and expiry still work when it is disabled.
 
 ### Custom profile colors
 
-For a dedicated `perf` color, add this to your shell startup
-file before KCM initialization (space-separated profile names):
+Custom profile colors connect three settings: the profile in KCM, the shell's
+list of profiles with dedicated colors, and the Starship module. Creating a
+Starship module does not create a KCM profile or configure its directory.
+
+For example, if `perf` is not already configured, add it to
+`~/.config/kcm/kcm_settings.toml`:
+
+```toml
+[profiles.perf]
+dir = "perf"                  # relative to kube_root
+emoji = "⚡"
+```
+
+Then add this to your shell startup file before KCM initialization
+(space-separated profile names; retain the default names):
 
 ```sh
 export KCM_STARSHIP_PROFILES='local dev qa prod other perf'
@@ -173,7 +241,7 @@ Then add the corresponding Starship module:
 [env_var.kcm_perf]
 variable = "KCM_PROMPT_TEXT_perf"
 format = '[$env_value]($style) '
-style = "bold #ff8700"
+style = "bold #ffaf00"
 ```
 
 With an explicit module sequence in your top-level format, add
@@ -183,6 +251,12 @@ other names use the fallback. Dedicated names support ASCII letters, digits,
 and underscores; other profile names remain visible through the fallback.
 Profile emoji settings refresh at initialization, profile/context selection, and
 renewal. After editing emoji settings, reselect the profile or context to refresh.
+
+If the profile appears with the fallback color, check that it is listed in
+`KCM_STARSHIP_PROFILES`. If it disappears after being added to that list, check
+the module's `variable` spelling and its inclusion in your prompt format.
+Keep `[env_var.kcm_fallback]` for profiles without dedicated colors, and leave
+`default` unset on every KCM module so inactive profiles remain hidden.
 
 ### Diagnosing other slow modules
 
@@ -196,6 +270,12 @@ repository and outside it to identify slow modules. If `git_status` is the
 culprit, temporarily set `[git_status] disabled = true` in your Starship config
 to confirm it. This hides that module; it does not fix the repository's Git
 performance. Do not assume the KCM change will resolve a Git timeout.
+
+Keep global `command_timeout` tuning separate from KCM setup: these native
+modules do not require a higher timeout. Disabling unused language or cloud
+modules can simplify the prompt; use timings to decide which changes matter
+for performance. `[git_status] stashed = ""` hides the stash indicator, but
+should not be treated as a general fix for slow Git operations.
 
 References: [Starship environment variables](https://starship.rs/config/#environment-variable),
 [custom commands](https://starship.rs/config/#custom-commands), and
