@@ -88,6 +88,9 @@ def check(executable, kind, binary, settings, base, mode, enter):
         state = base / (kind + "-" + mode + "-state")
         shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
         assert state.read_text() == "prod|remote", state.read_text()
+        shell.command("printf '%s|%s' \"$KCM_PROMPT_ACTIVE_VAR\" \"$KCM_PROMPT_TEXT_prod\" > " + shlex.quote(str(state)))
+        assert state.read_text().startswith("KCM_PROMPT_TEXT_prod|🚨 prod · remote · "), state.read_text()
+        assert state.read_text().endswith(" left"), state.read_text()
         # Let expiry occur while the shell is already parked at a prompt.
         clock = "$EPOCHSECONDS" if kind == "zsh" else "$(printf '%(%s)T' -1)"
         shell.command("export KCM_EXPIRES_AT=$(( " + clock + " + 2 ))")
@@ -99,6 +102,8 @@ def check(executable, kind, binary, settings, base, mode, enter):
         assert not first.exists() and not second.exists(), "Part of expired command executed"
         shell.command("printf '%s|%s|%s' \"$KCM_PROFILE\" \"$KUBECONFIG\" \"${KCM_CONTEXT:-}\" > " + shlex.quote(str(state)))
         assert state.read_text() == "local|/dev/null|", state.read_text()
+        shell.command("printf '%s|%s' \"$KCM_PROMPT_TEXT_local\" \"${KCM_PROMPT_TEXT_prod:-}\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "🏠 local · —|", state.read_text()
         # Prompt-time expiry after a running command must reset without killing it.
         shell.command("kcm profile prod; kcm context remote")
         output = shell.command("export KCM_EXPIRES_AT=1; printf completed > " + shlex.quote(str(state)))

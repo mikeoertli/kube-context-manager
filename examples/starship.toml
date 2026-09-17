@@ -1,55 +1,43 @@
 # Merge into ~/.config/starship.toml; replace your existing [kubernetes] block.
-# Remove an older [custom.kcm] block to avoid showing KCM twice.
-# With a custom top-level format, include $custom (before any table headers).
+# Remove ALL old [custom.kcm*] blocks so their shell commands stop running.
+# With a custom top-level format, include $env_var (before any table headers).
+# Requires the updated `kcm init zsh` / `kcm init bash` shell integration.
 
 [kubernetes]
 disabled = true
 
 # Default directory: ~/.kube/ (direct files only)
-[custom.kcm_local]
-when = 'test "${KCM_PROFILE:-}" = local'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+[env_var.kcm_local]
+variable = "KCM_PROMPT_TEXT_local"
+format = '[$env_value]($style) '
 style = "dimmed green"
 
 # Default directory: ~/.kube/dev/
-[custom.kcm_dev]
-when = 'test "${KCM_PROFILE:-}" = dev'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+[env_var.kcm_dev]
+variable = "KCM_PROMPT_TEXT_dev"
+format = '[$env_value]($style) '
 style = "yellow"
 
 # Default directory: ~/.kube/qa/
-[custom.kcm_qa]
-when = 'test "${KCM_PROFILE:-}" = qa'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+[env_var.kcm_qa]
+variable = "KCM_PROMPT_TEXT_qa"
+format = '[$env_value]($style) '
 style = "bold bright-red"
 
 # Default directory: ~/.kube/prod/
-[custom.kcm_prod]
-when = 'test "${KCM_PROFILE:-}" = prod'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+[env_var.kcm_prod]
+variable = "KCM_PROMPT_TEXT_prod"
+format = '[$env_value]($style) '
 style = "bold #ff00ff"
 
 # Default directory: ~/.kube/other/
-[custom.kcm_other]
-when = 'test "${KCM_PROFILE:-}" = other'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+[env_var.kcm_other]
+variable = "KCM_PROMPT_TEXT_other"
+format = '[$env_value]($style) '
 style = "bold #ff8700"
 
-# Any additional named profile, such as support, perf, or nightly.
-[custom.kcm_fallback]
-when = 'case "${KCM_PROFILE:-}" in ""|local|dev|qa|prod|other) exit 1 ;; *) exit 0 ;; esac'
-command = "kcm prompt"
-shell = ["sh"]
-format = '[$output]($style) '
+# Additional profiles, unless added to KCM_STARSHIP_PROFILES.
+[env_var.kcm_fallback]
+variable = "KCM_PROMPT_TEXT_fallback"
+format = '[$env_value]($style) '
 style = "bold yellow"
-

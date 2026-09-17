@@ -122,6 +122,7 @@ func (s *Settings) switchContext(w io.Writer, name, file string, now time.Time) 
 	emit(w, "KCM_FILE", c.File)
 	emit(w, "KUBECONFIG", c.File)
 	emit(w, "KCM_EXPIRES_AT", expiry)
+	s.emitPromptMetadata(w, currentProfile())
 	return nil
 }
 

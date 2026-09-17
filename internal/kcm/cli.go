@@ -90,6 +90,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 		}
 		emit(cmd.OutOrStdout(), "KCM_SETTINGS", s.Path)
 		reset(cmd.OutOrStdout(), name)
+		s.emitPromptMetadata(cmd.OutOrStdout(), name)
 		return nil
 	}}
 	root.AddCommand(profile)
@@ -178,6 +179,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 		}
 		emit(cmd.OutOrStdout(), "KCM_SETTINGS", s.Path)
 		emit(cmd.OutOrStdout(), "KCM_EXPIRES_AT", v)
+		s.emitPromptMetadata(cmd.OutOrStdout(), currentProfile())
 		return nil
 	}})
 	for _, name := range []string{"status", "prompt"} {

@@ -52,6 +52,7 @@ Evaluating the integration:
 - Defines `kcmkubectl`, `kcmhelm`, and `kcmk9s` to pass the selected context to
   those clients. Standard client commands are not replaced.
 - Installs prompt and Enter-key hooks for expiry reset and command cancellation.
+- Prepares exported text for Starship using shell built-ins at each prompt.
 - Runs `kcm doctor --quiet` to check local settings and configs without contacting
   a cluster.
 
@@ -310,8 +311,9 @@ with styles based on the profile-to-directory mapping: local green, dev yellow,
 qa red, prod magenta, and other orange, with a fallback for custom profiles.
 
 The guide covers custom prompt placement, emoji overrides, and migration from
-the previous `[custom.kcm]` snippet. It uses `kcm prompt` for the shell-selected
-context and timeout; namespace remains available through `kcm status`.
+the previous `[custom.kcm*]` snippets. Native `env_var` modules display the
+shell-selected context and countdown without starting prompt subprocesses.
+Namespace remains available through `kcm status`.
 
 ## Command reference
 

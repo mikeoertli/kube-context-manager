@@ -1,7 +1,10 @@
 if [[ -o interactive ]]; then
-    zmodload zsh/datetime
     autoload -Uz add-zsh-hook
-    _kcm_precmd() { _kcm_expire; return 0; }
+    _kcm_precmd() {
+        _kcm_expire
+        _kcm_update_prompt
+        return 0
+    }
     add-zsh-hook -d precmd _kcm_precmd 2>/dev/null
     add-zsh-hook precmd _kcm_precmd
     if [[ ${_KCM_ZLE_INSTALLED:-0} != 1 ]]; then

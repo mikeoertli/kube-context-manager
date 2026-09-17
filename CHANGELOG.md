@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.2.0 — in progress
+## 0.2.1 — in progress
+
+- Use native Starship environment-variable modules to avoid prompt subprocess timeouts.
+- Document migration, conditional display, and custom profile colors using generic examples.
+
+## 0.2.0 — 2026-09-17
 
 - Support external kubeconfig symlinks using their profile link paths.
 

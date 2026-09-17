@@ -7,6 +7,7 @@ if [[ $- == *i* ]]; then
         local _kcm_status=$?
         _kcm_ensure_keymaps
         _kcm_expire
+        _kcm_update_prompt
         return "$_kcm_status"
     }
     _kcm_accept_check() {
