@@ -25,7 +25,7 @@ Available Commands:
   list        List discovered contexts grouped by profile, with current selections marked
   namespace   Choose a shared namespace, or create one and switch to it
   permissions Inspect live permissions in one namespace; never cached
-  profile     Change this shell's profile; omit name for fzf
+  profile     Change profile; omit name to pick a profile and context
   profiles    List profile directories and default timeouts
   prompt      Print compact profile/context information for Starship
   renew       Explicitly restart the active context's configured timeout
@@ -46,7 +46,7 @@ Use "kcm [command] --help" for more information about a command.
 ## `kcm profile`
 
 ```text
-Expose only the chosen profile's directory in the context selector. Switching profiles clears the selected context and timeout; select a context afterwards. New shells start local.
+Without a name, select a profile with fzf, then select a context in that profile. Both selections apply together; cancellation, an empty profile, or an error leaves the shell unchanged. A named profile changes only the profile and clears its context and timeout; select a context afterwards. Switching profiles clears previous-context history. New shells start local.
 
 Usage:
   kcm profile [name] [flags]

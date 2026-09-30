@@ -42,7 +42,10 @@ names in different files are disambiguated by source path in the switcher or
 3. Context changes retain an earlier unexpired deadline if the newly selected
    context is timed. Untimed selections clear the timer.
 4. `kcm renew` applies the current profile settings and restarts the deadline.
-5. Switching profiles or clearing selection clears the timer.
+5. Switching profiles or clearing selection clears the timer. The interactive
+   profile picker also requires a context selection, then starts that context's
+   configured timer. It emits shell changes only after both selections succeed;
+   cancellation or failure at either step leaves the existing shell state intact.
 6. Expiry clears context, file, previous selection, and deadline, sets profile
    to local, and sets `KUBECONFIG=/dev/null`.
 

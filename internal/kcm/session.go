@@ -71,12 +71,12 @@ func filteredEnv(names ...string) []string {
 	return out
 }
 
-func chooseContext(cs []Context) (Context, error) {
+func chooseContext(profile string, cs []Context) (Context, error) {
 	rows := make([]string, len(cs))
 	for i, c := range cs {
 		rows[i] = fmt.Sprintf("%s  │  %s  │  %s", c.Name, c.Server, c.File)
 	}
-	i, err := choose("Context · "+currentProfile(), rows)
+	i, err := choose("Context · "+profile, rows)
 	if err != nil {
 		return Context{}, err
 	}
@@ -97,32 +97,56 @@ func (s *Settings) switchContext(w io.Writer, name, file string, now time.Time) 
 		}
 	}
 	if name == "" {
-		c, err = chooseContext(cs)
+		c, err = chooseContext(currentProfile(), cs)
 	} else {
 		c, err = selectContext(cs, name, file)
 	}
 	if err != nil {
 		return err
 	}
+	return s.activateContext(w, currentProfile(), c, now, false)
+}
+
+func (s *Settings) pickProfileContext(w io.Writer, profile string) error {
+	cs, err := s.contexts(profile)
+	if err != nil {
+		return err
+	}
+	if len(cs) == 0 {
+		return fmt.Errorf("no contexts available in profile %q; shell selection unchanged", profile)
+	}
+	c, err := chooseContext(profile, cs)
+	if err != nil {
+		return err
+	}
+	// Apply both selections together only after the second picker succeeds.
+	return s.activateContext(w, profile, c, time.Now(), true)
+}
+
+func (s *Settings) activateContext(w io.Writer, profile string, c Context, now time.Time, resetProfile bool) error {
 	if err := validName(c.File); err != nil {
 		return err
 	}
 	expiry := ""
-	if d := s.timeout(currentProfile(), c.File); d > 0 {
+	if d := s.timeout(profile, c.File); d > 0 {
 		deadline := now.Add(d).Unix()
-		if old, err := strconv.ParseInt(os.Getenv("KCM_EXPIRES_AT"), 10, 64); err == nil && old > now.Unix() && old < deadline {
+		if old, err := strconv.ParseInt(os.Getenv("KCM_EXPIRES_AT"), 10, 64); !resetProfile && err == nil && old > now.Unix() && old < deadline {
 			deadline = old
 		}
 		expiry = strconv.FormatInt(deadline, 10)
 	}
 	emit(w, "KCM_SETTINGS", s.Path)
-	emit(w, "KCM_PREVIOUS_CONTEXT", os.Getenv("KCM_CONTEXT"))
-	emit(w, "KCM_PREVIOUS_FILE", os.Getenv("KCM_FILE"))
+	if resetProfile {
+		reset(w, profile)
+	} else {
+		emit(w, "KCM_PREVIOUS_CONTEXT", os.Getenv("KCM_CONTEXT"))
+		emit(w, "KCM_PREVIOUS_FILE", os.Getenv("KCM_FILE"))
+	}
 	emit(w, "KCM_CONTEXT", c.Name)
 	emit(w, "KCM_FILE", c.File)
 	emit(w, "KUBECONFIG", c.File)
 	emit(w, "KCM_EXPIRES_AT", expiry)
-	s.emitPromptMetadata(w, currentProfile())
+	s.emitPromptMetadata(w, profile)
 	return nil
 }
 

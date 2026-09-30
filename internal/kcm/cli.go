@@ -54,7 +54,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 	contextCmd.ValidArgsFunction = contextCompletion(load)
 	root.RunE = contextCmd.RunE
 	root.AddCommand(contextCmd)
-	profile := &cobra.Command{Use: "profile [name]", Short: "Change this shell's profile; omit name for fzf", Long: "Expose only the chosen profile's directory in the context selector. Switching profiles clears the selected context and timeout; select a context afterwards. New shells start local.", Args: cobra.MaximumNArgs(1), Example: "  kcm profile\n  kcm profile prod\n  kcm context customer-a", ValidArgsFunction: profileCompletion(load), RunE: func(cmd *cobra.Command, args []string) error {
+	profile := &cobra.Command{Use: "profile [name]", Short: "Change profile; omit name to pick a profile and context", Long: "Without a name, select a profile with fzf, then select a context in that profile. Both selections apply together; cancellation, an empty profile, or an error leaves the shell unchanged. A named profile changes only the profile and clears its context and timeout; select a context afterwards. Switching profiles clears previous-context history. New shells start local.", Args: cobra.MaximumNArgs(1), Example: "  kcm profile\n  kcm profile prod\n  kcm context customer-a", ValidArgsFunction: profileCompletion(load), RunE: func(cmd *cobra.Command, args []string) error {
 		if e := needShell(); e != nil {
 			return e
 		}
@@ -84,6 +84,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 				return e
 			}
 			name = names[i]
+			return s.pickProfileContext(cmd.OutOrStdout(), name)
 		}
 		if _, e = s.dir(name); e != nil {
 			return e

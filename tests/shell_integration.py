@@ -223,19 +223,35 @@ def check_picker(executable, binary, settings, base, root, fzf):
         shell.send("prod", enter=b"")
         shell.drain(0.3)
         shell.send("")
-        profile_output = shell.prompt()
-        state = base / "picker-state"
-        shell.command("printf '%s' \"$KCM_PROFILE\" > " + shlex.quote(str(state)))
-        assert state.read_text() == "prod", (state.read_text(), profile_output)
-        shell.send("kcm")
         output = shell.drain(0.5)
-        assert b"Context" in output, output
+        assert b"Context" in output and b"prod" in output, output
+        state = base / "picker-state"
         shell.send("remote", enter=b"")
         shell.drain(0.3)
         shell.send("")
         shell.prompt()
         shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
         assert state.read_text() == "prod|remote", state.read_text()
+        # Cancelling the second picker preserves the original shell selection.
+        shell.send("kcm profile")
+        shell.drain(0.5)
+        shell.send("prod", enter=b"")
+        shell.drain(0.3)
+        shell.send("")
+        output = shell.drain(0.5)
+        assert b"Context" in output, output
+        os.write(shell.fd, b"\x03")
+        shell.prompt()
+        shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "prod|remote", "Context cancellation changed shell state"
+        # Plain kcm still opens only the current profile's context picker.
+        shell.send("kcm")
+        output = shell.drain(0.5)
+        assert b"Context" in output and b"Profile for this shell" not in output, output
+        shell.send("remote", enter=b"")
+        shell.drain(0.3)
+        shell.send("")
+        shell.prompt()
         shell.send("kcm profile")
         shell.drain(0.5)
         os.write(shell.fd, b"\x03")

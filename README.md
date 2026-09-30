@@ -76,8 +76,8 @@ or permissions. `kcm contexts` continues to list only the current profile.
 
 ```sh
 kcm                          # fuzzy-select a local context
-kcm profile                  # fuzzy-select a profile for this shell
-kcm profile prod             # or select explicitly
+kcm profile                  # pick a profile, then a context in one flow
+kcm profile prod             # or set only the profile explicitly
 kcm context customer-a
 kcmkubectl get pods           # supplies --context customer-a
 kcmhelm list                  # supplies --kube-context customer-a
@@ -90,7 +90,14 @@ kcm profile local            # explicitly leave production
 ```
 
 Every new shell starts in `local`, including a new interactive child shell.
-Changing profiles clears the context. **Choose a context before using a client.**
+`kcm profile` opens the profile picker followed by that profile's context picker.
+Both selections apply together. Cancelling either picker, selecting an empty
+profile, or encountering an error leaves the shell unchanged. The new selection
+starts the profile's configured timeout and clears previous-context history.
+
+`kcm profile NAME` clears the context and timeout without opening a picker.
+**Choose a context before using a client.** Plain `kcm` continues to select a
+context in the current profile.
 With no selection, `KUBECONFIG=/dev/null` prevents fallback to a shared default
 config. Selecting a context sets `KUBECONFIG` to its source file.
 
@@ -321,7 +328,7 @@ Namespace remains available through `kcm status`.
 | Command | Function |
 | --- | --- |
 | `kcm`, `kcm context [name\|-]` | Select a context; `-` returns to the previous one |
-| `kcm profile [name]` | Select this shell's profile |
+| `kcm profile [name]` | Pick a profile and context; with a name, set only the profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |
 | `kcm list` | List contexts grouped by profile, marking global and shell selections |
 | `kcm contexts`, `kcm profiles` | List available contexts or profiles |

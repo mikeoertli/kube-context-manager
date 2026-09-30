@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 — in progress
+
+- Follow interactive profile selection with a context picker, applying both together.
+- Preserve the current shell selection when either picker is cancelled or fails.
+
 ## 0.2.1 — in progress
 
 - Use native Starship environment-variable modules to avoid prompt subprocess timeouts.
