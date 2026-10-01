@@ -39,7 +39,8 @@ func choose(header string, rows []string) (int, error) {
 	for i, r := range rows {
 		lines[i] = fmt.Sprintf("%d\t%s", i, r)
 	}
-	cmd := exec.Command("fzf", "--no-multi", "--delimiter=\t", "--with-nth=2..", "--layout=reverse", "--height=70%", "--border", "--header="+header, "--prompt=› ")
+	cmd := exec.Command("fzf", "--no-multi", "--delimiter=\t", "--with-nth=2..", "--layout=reverse", "--height=70%", "--border", "--header="+header, "--prompt=› ",
+		"--highlight-line", "--color=fg+:#000000,bg+:#ff5faf,hl+:#000000,pointer:#000000")
 	// User fzf options must not add shell previews, alter records, or select many.
 	cmd.Env = filteredEnv("FZF_DEFAULT_OPTS", "FZF_DEFAULT_OPTS_FILE", "FZF_DEFAULT_COMMAND")
 	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))

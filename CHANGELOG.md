@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.3.0 — in progress
+## 0.4.0 — Work in progress
+
+- Highlight the active picker row in bright pink with black text (requires fzf 0.52+).
+- Add an isolated demo shell, a repeatable VHS recording with clear menu selections,
+  and a README demo GIF.
+
+## 0.3.0 — 2026-10-01
 
 - Follow interactive profile selection with a context picker, applying both together.
 - Preserve the current shell selection when either picker is cancelled or fails.

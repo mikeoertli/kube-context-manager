@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Only namespace discovery/creation is simulated; never delegate to a real client."""
+import sys
+
+args = sys.argv[1:]
+while args and args[0] in ("--kubeconfig", "--context"):
+    args = args[2:]
+if args[:2] == ["get", "namespaces"]:
+    print("default\napp\nobservability")
+elif len(args) == 3 and args[:2] == ["create", "namespace"]:
+    print(f"namespace/{args[2]} created (demo)")
+else:
+    print("Demo client: only get namespaces and create namespace are simulated.", file=sys.stderr)
+    sys.exit(1)

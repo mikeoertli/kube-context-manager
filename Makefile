@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: build install test check deps
+.PHONY: build install test check deps demo demo-gif
 build:
 	$(GO) build -o bin/kcm ./cmd/kcm
 install:
@@ -13,3 +13,8 @@ check:
 	test -z "$$($(GO) fmt ./...)"
 	$(GO) vet ./...
 	$(GO) test ./...
+demo: build
+	bash demo/run.sh
+demo-gif: build
+	vhs validate demo/demo.tape
+	vhs demo/demo.tape

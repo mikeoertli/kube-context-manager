@@ -12,9 +12,19 @@ KCM uses **shared kubeconfig files**, **shell environment variables**, and **fzf
 It does not create per-shell kubeconfig copies or change a source file's
 `current-context`. Namespace changes are shared between shells using that context.
 
+## Demo
+
+![KCM demo: profile and context selection, namespaces, import, and expiry](assets/demo.gif)
+
+Recorded with synthetic configs and a simulated namespace API. The demo uses a
+six-second production timeout to show expiry; the normal default is eight hours.
+The active menu choice is highlighted in bright pink with black text.
+Try it with `make demo`, or regenerate the GIF with `make demo-gif`.
+See the [demo guide and VHS sequence](demo/README.md) for dependencies and details.
+
 ## Install
 
-Requires Go 1.25+, [fzf](https://github.com/junegunn/fzf), and zsh or bash 4.4+.
+Requires Go 1.25+, [fzf](https://github.com/junegunn/fzf) 0.52+, and zsh or bash 4.4+.
 `kubectl` is needed for namespace discovery. No gum or yq dependency.
 
 ```sh
@@ -201,7 +211,9 @@ New config and archive files have mode `0600`.
 ## Namespace picker and creation
 
 `kcm context`, `kcm profile`, and `kcm namespace` (alias `ns`) open fzf pickers
-when called without a name. The namespace picker queries the selected cluster
+when called without a name. The active row has a bright pink background and black
+text; use the arrow keys to move and Enter to confirm.
+The namespace picker queries the selected cluster
 and includes **Create new namespace…**. Choose it, enter a name, and KCM creates
 the namespace before switching. The name prompt identifies the profile and
 context; a blank name or Ctrl-C cancels.
