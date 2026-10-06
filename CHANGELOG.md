@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.4.0 — Work in progress
+## 0.5.0 — Work in progress
+
+- Add a GitHub Actions workflow that notifies the Homebrew tap when a stable
+  version tag is pushed, and document Homebrew installation and release setup.
+
+## 0.4.0 — 2026-10-06
 
 - Highlight the active picker row in bright pink with black text (requires fzf 0.52+).
 - Add an isolated demo shell, a repeatable VHS recording with clear menu selections,

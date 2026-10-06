@@ -38,6 +38,17 @@ Ensure the Go bin directory is on `PATH`. On macOS, `brew install go fzf` provid
 the dependencies; `brew install bash` provides a modern bash if desired. Apple's
 bundled bash 3.2 does not support KCM's Enter-time expiry integration.
 
+### Homebrew
+
+```sh
+brew install mikeoertli/tap/kcm
+brew update
+brew upgrade mikeoertli/tap/kcm
+```
+
+Homebrew installs the dependencies declared by the tap. A compatible prebuilt
+bottle avoids local compilation; otherwise Homebrew builds from source.
+
 ### Shell integration (required for session switching and timeouts)
 
 Add this **after shell plugins and keybindings** in `~/.zshrc`:
@@ -373,8 +384,26 @@ Tests use temporary fixture configs and do not contact a Kubernetes cluster.
 Go dependencies are pinned in `go.mod` and verified by the committed `go.sum`.
 `VERSION` is the sole source of the application's version, embedded at compile
 time for Make builds and direct `go build`, `go install`, or `go run` commands.
-Update that file and rebuild to change the reported version. No GitHub Actions,
-release jobs, or tagging workflow are included.
+Update that file and rebuild to change the reported version.
+
+### Homebrew releases
+
+[`.github/workflows/homebrew.yml`](.github/workflows/homebrew.yml) notifies
+[`mikeoertli/homebrew-tap`](https://github.com/mikeoertli/homebrew-tap) when a
+stable `vMAJOR.MINOR.PATCH` tag is pushed. Keep the tag aligned with `VERSION`
+and include the workflow in the tagged commit. For the current version, the
+release tag is `v0.5.0`.
+
+The workflow uses the **TAP_DISPATCH_TOKEN** repository secret to trigger the
+tap's release updater for `kcm`. The token needs **Actions: Read and write**
+access to the tap repository. See the [tap's setup instructions](https://github.com/mikeoertli/homebrew-tap#notify-the-tap-when-a-project-is-tagged)
+for token configuration and the publishing process.
+
+The tap opens an update PR, builds and tests its packages, and provides a
+separate bottle-publishing step. The notification does not publish the package
+on its own. Prerelease tags are skipped, and existing tags are not retriggered.
+After the tap update is published, use `brew update` and `brew upgrade` on each
+computer to install it. Ordinary branch pushes do not change the packaged version.
 
 ## Related
 
