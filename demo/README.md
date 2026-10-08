@@ -50,8 +50,9 @@ The sequence shows:
 1. Profiles and their discovered contexts with `kcm list`.
 2. Profile selection followed directly by context selection.
 3. Namespace selection and shared namespace status.
-4. Importing and renaming a config into another profile.
-5. Production expiry cancelling a submitted command and returning to local.
+4. Setting and extending a session deadline, and printing kubeconfig/context values.
+5. Importing and renaming a config into another profile.
+6. Production expiry cancelling a submitted command and returning to local.
 
 The tape uses screen-content waits at picker transitions and short pauses for
 reading. Synthetic paths and countdown values can vary between recordings;

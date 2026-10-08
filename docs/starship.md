@@ -166,11 +166,11 @@ and [right-prompt guide](https://starship.rs/advanced-config/#enable-right-promp
 
 ### Symbols, namespace, and timeout
 
-Emoji come from `kcm_settings.toml`, so Starship and `kcm profiles` agree.
+Emoji come from `kcm_config.toml`, so Starship and `kcm profiles` agree.
 To use your previous red production symbol, for example:
 
 ```toml
-# ~/.config/kcm/kcm_settings.toml
+# ~/.config/kcm/kcm_config.toml
 [profiles.prod]
 emoji = "🔴"
 ```
@@ -220,7 +220,7 @@ list of profiles with dedicated colors, and the Starship module. Creating a
 Starship module does not create a KCM profile or configure its directory.
 
 For example, if `perf` is not already configured, add it to
-`~/.config/kcm/kcm_settings.toml`:
+`~/.config/kcm/kcm_config.toml`:
 
 ```toml
 [profiles.perf]

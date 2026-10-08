@@ -42,6 +42,9 @@ names in different files are disambiguated by source path in the switcher or
 3. Context changes retain an earlier unexpired deadline if the newly selected
    context is timed. Untimed selections clear the timer.
 4. `kcm renew` applies the current profile settings and restarts the deadline.
+   `--for DURATION` sets expiry from now; `--extend DURATION` adds time to an
+   existing unexpired deadline. They emit only shell state, never modify settings,
+   and cannot be combined. Normal context-selection rules still apply afterward.
 5. Switching profiles or clearing selection clears the timer. The interactive
    profile picker also requires a context selection, then starts that context's
    configured timer. It emits shell changes only after both selections succeed;

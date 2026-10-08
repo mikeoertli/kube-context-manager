@@ -174,6 +174,20 @@ in the repository. Non-local configs linked into the root still require a waiver
 The timer starts when you select a context with a timeout. Changing contexts
 does not extend an existing deadline; `kcm renew` explicitly restarts it.
 
+For a longer session, override the deadline without editing your config:
+
+```sh
+kcm renew --for 24h      # expire 24 hours from now (96h also works)
+kcm renew --extend 24h   # add 24 hours to the existing active deadline
+kcm renew               # restart the timeout configured for this profile
+```
+
+The two flags are mutually exclusive and require a duration of at least one
+second. `--extend` needs an unexpired deadline; use `--for` if there is no active
+timer. Renewals affect only this shell. Later context selections apply normal
+profile rules and can shorten an extended deadline; selecting an untimed context
+clears it. Switching profiles or clearing the selection also clears the timer.
+
 - At a **stale prompt**, pressing Enter resets the profile to `local`, clears
   the context and `KUBECONFIG` selection, and **cancels the entire submitted
   command line**. A notice tells you what happened.
@@ -185,6 +199,35 @@ This is an interactive-shell reminder, not an access-control boundary. Custom
 widgets that bypass `accept-line`, other shell integrations that replace KCM's
 Enter bindings, and commands sent without the normal line editor bypass that
 check. KCM does not wrap every client invocation with a timeout gate.
+
+### Inspecting the shell selection
+
+`kcm status` shows a formatted session summary, including the profile directory
+and any expiry time. Terminal output uses color; redirected output and `NO_COLOR`
+omit color codes. A fresh local shell has no context selected, so status displays
+**Not selected** instead of `/dev/null`. Select a local context with `kcm context`
+to see its actual kubeconfig path. Namespace changes affect other shells using
+the same context in that source file.
+
+Use these commands when you need just a value for a script:
+
+```sh
+kcm print-kubeconfig    # alias: kcm kc
+kcm print-context-name # alias: kcm ctx
+
+# In a script, stop if either value is unavailable:
+config=$(kcm kc) || exit 1
+context=$(kcm ctx) || exit 1
+kubectl --kubeconfig "$config" --context "$context" get pods
+```
+
+They print the selected source path or context name plus a newline. If there is
+no valid selection, they return an error and leave stdout empty. They preserve
+symlink paths and do not query the cluster or change shell state.
+
+In 0.6.0, `ctx` changes from a selection alias to a print command. Use
+`kcm context NAME` to switch contexts. Open a new shell after upgrading so its
+shell function recognizes the new alias correctly.
 
 ## Import kubeconfigs
 
@@ -256,8 +299,14 @@ for scope, options, and limitations.
 
 ## Settings and local-only checks
 
-The settings file is `~/.config/kcm/kcm_settings.toml`. See the complete
+The settings file is `~/.config/kcm/kcm_config.toml`. See the complete
 [example settings](internal/kcm/defaults.toml), which KCM also uses as its defaults.
+
+Upgrading from an earlier version: rename `kcm_settings.toml` to
+`kcm_config.toml` in that directory and update any explicit `KCM_SETTINGS` or
+`--settings` paths. Existing initialized shells retain their exported settings
+path; update it or open a new shell after renaming the file.
+
 Override the root, add profiles, choose emoji, or disable a timeout:
 
 ```toml
@@ -358,7 +407,8 @@ Namespace remains available through `kcm status`.
 | `kcm permissions [CONTEXT] [--details]` | Inspect live permissions for one namespace |
 | `kcm can-i VERB RESOURCE` | Check one API action without executing it |
 | `kcm status`, `kcm prompt` | Detailed status or compact prompt output |
-| `kcm clear`, `kcm renew` | Clear selection or restart its timer |
+| `kcm kc`, `kcm ctx` | Print the selected kubeconfig path or context name |
+| `kcm clear`, `kcm renew [--for DURATION\|--extend DURATION]` | Clear selection, restart, or extend its timer |
 | `kcm install PATH` | Import, rename, copy, or move configs |
 | `kcm waive NAME`, `kcm unwaive NAME`, `kcm waivers` | Manage root exceptions |
 | `kcm doctor` | Validate settings and config layout |
@@ -369,7 +419,7 @@ Namespace remains available through `kcm status`.
 | `kcm version`, `kcm help [COMMAND]` | Version and help |
 
 Every `kcm` command supports `--help`; wrapper arguments pass through to the client.
-Aliases: `ctx`, `ns`. See
+Aliases: `kc` for `print-kubeconfig`, `ctx` for `print-context-name`, `ns` for `namespace`. See
 [complete command help](docs/commands.md) and [behavior details](docs/design.md).
 
 ## Development

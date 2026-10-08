@@ -12,33 +12,35 @@ Usage:
   kcm [command]
 
 Available Commands:
-  can-i       Check a live API permission without executing the action
-  clear       Clear the selected context, keeping this shell's profile
-  completion  Print shell completions, including profile/context names
-  context     Select a context in this profile; omit name for fzf
-  contexts    List available contexts, servers, namespaces, and source files
-  doctor      Validate settings, profile configs, root waivers, and fzf
-  exec        Run a supported client with the shell-selected context
-  help        Help about any command
-  init        Print shell integration (source it in your startup file)
-  install     Import a kubeconfig, with optional readable names and copy/move
-  list        List discovered contexts grouped by profile, with current selections marked
-  namespace   Choose a shared namespace, or create one and switch to it
-  permissions Inspect live permissions in one namespace; never cached
-  profile     Change profile; omit name to pick a profile and context
-  profiles    List profile directories and default timeouts
-  prompt      Print compact profile/context information for Starship
-  renew       Explicitly restart the active context's configured timeout
-  settings    Locate or initialize TOML settings
-  status      Show profile, context, namespace, and expiry
-  unwaive     Remove a non-local root waiver
-  version     Show the development version
-  waive       Allow a non-local context at the kube root
-  waivers     List non-local root waivers (context, source file, server)
+  can-i              Check a live API permission without executing the action
+  clear              Clear the selected context, keeping this shell's profile
+  completion         Print shell completions, including profile/context names
+  context            Select a context in this profile; omit name for fzf
+  contexts           List available contexts, servers, namespaces, and source files
+  doctor             Validate settings, profile configs, root waivers, and fzf
+  exec               Run a supported client with the shell-selected context
+  help               Help about any command
+  init               Print shell integration (source it in your startup file)
+  install            Import a kubeconfig, with optional readable names and copy/move
+  list               List discovered contexts grouped by profile, with current selections marked
+  namespace          Choose a shared namespace, or create one and switch to it
+  permissions        Inspect live permissions in one namespace; never cached
+  print-context-name Print this shell's selected context name
+  print-kubeconfig   Print this shell's selected kubeconfig file path
+  profile            Change profile; omit name to pick a profile and context
+  profiles           List profile directories and default timeouts
+  prompt             Print compact profile/context information for Starship
+  renew              Restart or extend this shell's active context timeout
+  settings           Locate or initialize TOML settings
+  status             Show this shell's selection and timeout in a readable summary
+  unwaive            Remove a non-local root waiver
+  version            Show the development version
+  waive              Allow a non-local context at the kube root
+  waivers            List non-local root waivers (context, source file, server)
 
 Flags:
   -h, --help              help for kcm
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 
 Use "kcm [command] --help" for more information about a command.
 ```
@@ -60,7 +62,7 @@ Flags:
   -h, --help   help for profile
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm context`
@@ -71,12 +73,9 @@ Select a context for this shell without writing current-context to the source fi
 Usage:
   kcm context [name|-] [flags]
 
-Aliases:
-  context, ctx
-
 Examples:
   kcm context
-  kcm ctx kind-local
+  kcm context kind-local
   kcm context customer-a --file ~/.kube/prod/customer.yaml
 
 Flags:
@@ -84,7 +83,7 @@ Flags:
   -h, --help          help for context
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm namespace`
@@ -109,7 +108,7 @@ Flags:
   -h, --help     help for namespace
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm list`
@@ -127,7 +126,7 @@ Flags:
   -h, --help   help for list
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm contexts`
@@ -143,7 +142,7 @@ Flags:
       --names   Print only context names
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm profiles`
@@ -158,13 +157,13 @@ Flags:
   -h, --help   help for profiles
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm status`
 
 ```text
-Show profile, context, namespace, and expiry
+Show this shell's selection and timeout in a readable summary
 
 Usage:
   kcm status [flags]
@@ -173,7 +172,7 @@ Flags:
   -h, --help   help for status
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm clear`
@@ -188,22 +187,29 @@ Flags:
   -h, --help   help for clear
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm renew`
 
 ```text
-Explicitly restart the active context's configured timeout
+Without flags, restart the active context's configured timeout. --for sets a deadline from now; --extend adds time to an existing, unexpired deadline. Durations must be at least one second (for example 24h or 96h). These changes affect only this shell's selection, not settings, credentials, or other shells. Later context selections still apply the profile's normal timeout rules.
 
 Usage:
   kcm renew [flags]
 
+Examples:
+  kcm renew
+  kcm renew --for 24h
+  kcm renew --extend 24h
+
 Flags:
-  -h, --help   help for renew
+      --extend duration   Add this much time to the active deadline, e.g. 24h
+      --for duration      Set expiry this far from now, e.g. 24h
+  -h, --help              help for renew
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm install`
@@ -235,7 +241,7 @@ Flags:
       --rename-user string      New user display name
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm waive`
@@ -251,7 +257,7 @@ Flags:
   -h, --help          help for waive
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm waivers`
@@ -266,7 +272,7 @@ Flags:
   -h, --help   help for waivers
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm unwaive`
@@ -282,7 +288,7 @@ Flags:
   -h, --help          help for unwaive
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm doctor`
@@ -298,7 +304,7 @@ Flags:
       --quiet   Print errors only
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm init`
@@ -317,7 +323,7 @@ Flags:
   -h, --help   help for init
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm completion`
@@ -332,7 +338,7 @@ Flags:
   -h, --help   help for completion
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm settings`
@@ -351,7 +357,7 @@ Flags:
   -h, --help   help for settings
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 
 Use "kcm settings [command] --help" for more information about a command.
 ```
@@ -368,7 +374,7 @@ Flags:
   -h, --help   help for init
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm settings path`
@@ -383,7 +389,7 @@ Flags:
   -h, --help   help for path
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm prompt`
@@ -398,7 +404,49 @@ Flags:
   -h, --help   help for prompt
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm print-kubeconfig`
+
+```text
+Print only the selected kubeconfig file path followed by a newline, for use in scripts. Requires a valid KCM selection; if none is selected, exits with an error and no stdout. Does not fall back to a global context or /dev/null, change the selection, or contact the cluster.
+
+Usage:
+  kcm print-kubeconfig [flags]
+
+Aliases:
+  print-kubeconfig, kc
+
+Examples:
+  kcm kc
+
+Flags:
+  -h, --help   help for print-kubeconfig
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm print-context-name`
+
+```text
+Print only the selected context name followed by a newline, for use in scripts. Requires a valid KCM selection; if none is selected, exits with an error and no stdout. Does not fall back to a global context or /dev/null, change the selection, or contact the cluster.
+
+Usage:
+  kcm print-context-name [flags]
+
+Aliases:
+  print-context-name, ctx
+
+Examples:
+  kcm ctx
+
+Flags:
+  -h, --help   help for print-context-name
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm permissions`
@@ -422,7 +470,7 @@ Flags:
       --request-timeout duration   Timeout for the live check; must be positive (default 10s)
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm can-i`
@@ -450,7 +498,7 @@ Flags:
       --subresource string         Check a subresource, such as log or exec
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm exec`
@@ -465,7 +513,7 @@ Flags:
   -h, --help   help for exec
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm version`
@@ -480,7 +528,7 @@ Flags:
   -h, --help   help for version
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```
 
 ## `kcm help`
@@ -496,5 +544,5 @@ Flags:
   -h, --help   help for help
 
 Global Flags:
-      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_settings.toml")
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
 ```

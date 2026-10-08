@@ -37,7 +37,7 @@ func settingsPath() string {
 		return p
 	}
 	h, _ := os.UserHomeDir()
-	return filepath.Join(h, ".config", "kcm", "kcm_settings.toml")
+	return filepath.Join(h, ".config", "kcm", "kcm_config.toml")
 }
 
 func expandPath(s string) (string, error) {

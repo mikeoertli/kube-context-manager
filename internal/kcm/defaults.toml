@@ -1,4 +1,4 @@
-# ~/.config/kcm/kcm_settings.toml
+# ~/.config/kcm/kcm_config.toml
 kube_root = "~/.kube"
 # Loopback IPs and localhost are always local. No DNS lookups are performed.
 local_hosts = [] # e.g. ["kubernetes.docker.internal"]

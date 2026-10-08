@@ -10,6 +10,7 @@ import json
 import os
 import pathlib
 import pty
+import re
 import select
 import shlex
 import shutil
@@ -24,7 +25,8 @@ class Shell:
     def __init__(self, executable, kind, binary, settings):
         self.pid, self.fd = pty.fork()
         if self.pid == 0:
-            env = dict(os.environ, TERM="xterm-256color", KCM_SETTINGS=str(settings))
+            env = dict(os.environ, TERM="xterm-256color", KCM_SETTINGS=str(settings), KCM_PROMPT_ENABLED="1")
+            env.pop("KCM_STARSHIP_PROFILES", None)
             env.pop("ENV", None)
             env.pop("BASH_ENV", None)
             args = [executable, "-f", "-i"] if kind == "zsh" else [executable, "--noprofile", "--norc", "-i"]
@@ -162,6 +164,21 @@ def check_isolation(executable, kind, binary, settings, base, root):
         b.command("printf '%s' \"$KCM_CONTEXT\" > " + shlex.quote(str(b_state)))
         assert a_state.read_text() == "remote" and b_state.read_text() == "second"
         assert config.read_bytes() == before, "Selection mutated a shared source"
+        # Renewal and read-only aliases operate in the parent shell, with no effect on its peer.
+        b.command("printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(b_state)))
+        peer_deadline = b_state.read_text()
+        a.command("kcm renew --for 96h; printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(a_state)))
+        deadline = int(a_state.read_text())
+        assert abs(deadline - int(time.time()) - 96 * 3600) < 5
+        a.command("kcm renew --extend 24h; printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(a_state)))
+        assert int(a_state.read_text()) == deadline + 24 * 3600
+        b.command("printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(b_state)))
+        assert b_state.read_text() == peer_deadline, "Renew changed the other shell"
+        for command, expected in [("kc", str(config)), ("print-kubeconfig", str(config)), ("ctx", "remote"), ("print-context-name", "remote")]:
+            a.command("kcm " + command + " > " + shlex.quote(str(a_state)))
+            assert a_state.read_text() == expected + "\n", a_state.read_text()
+        a.command("kcm renew; printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(a_state)))
+        assert abs(int(a_state.read_text()) - int(time.time()) - 8 * 3600) < 5
         fakebin = base / "clients"
         fakebin.mkdir(exist_ok=True)
         for client in ["kubectl", "helm", "k9s"]:
@@ -284,7 +301,7 @@ def check_picker(executable, binary, settings, base, root, fzf):
                 assert "namespace creation cancelled" in output, output
             shell.command("kcm status > " + shlex.quote(str(state)))
             expected = "kube-system" if new_name is None else "fresh-demo"
-            assert "Namespace: " + expected + " (shared)" in state.read_text(), state.read_text()
+            assert re.search(r"(?m)^  Namespace\s+" + re.escape(expected) + r"$", state.read_text()), state.read_text()
         calls = nslog.read_text()
         assert calls.count("\ncreate\nnamespace\nfresh-demo\n") == 1, calls
         assert "--context\nremote\ncreate\nnamespace\nfresh-demo\n" in calls, calls

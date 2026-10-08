@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.5.0 — Work in progress
+## 0.6.0 — 2026-10-08
+
+- Add `kcm renew --for DURATION` and `--extend DURATION` for one-off shell deadlines.
+- Add `kcm print-kubeconfig` (`kc`) and `kcm print-context-name` (`ctx`) for scripts.
+  `ctx` now prints the selected name; use `kcm context NAME` to select a context.
+- Format `kcm status` with terminal colors and aligned fields, show missing
+  selections clearly, and explain namespace changes shared across shells.
+- Rename the default settings file to `~/.config/kcm/kcm_config.toml`;
+  existing users should rename `kcm_settings.toml` and update explicit paths.
+
+## 0.5.0 — 2026-10-08
 
 - Add a GitHub Actions workflow that notifies the Homebrew tap when a stable
   version tag is pushed, and document Homebrew installation and release setup.

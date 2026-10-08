@@ -28,7 +28,7 @@ func newCommand(version string, shell bool) *cobra.Command {
 	root := &cobra.Command{Use: "kcm", Short: "Kubernetes profiles and contexts scoped to your shell", Long: "Choose Kubernetes profiles and contexts for this shell. Source kubeconfigs are shared; context selection uses environment variables and the kcmkubectl, kcmhelm, and kcmk9s shell wrappers. Expiry resets an interactive shell to local and cancels an Enter-submitted command at a stale prompt.", SilenceUsage: true, SilenceErrors: true, Args: cobra.NoArgs}
 	root.PersistentFlags().StringVar(&path, "settings", path, "Settings file (also KCM_SETTINGS)")
 	root.CompletionOptions.DisableDefaultCmd = true
-	contextCmd := &cobra.Command{Use: "context [name|-]", Aliases: []string{"ctx"}, Short: "Select a context in this profile; omit name for fzf", Long: "Select a context for this shell without writing current-context to the source file. Use '-' to return to the previous context. Duplicate names require --file or interactive selection.", Args: cobra.MaximumNArgs(1), Example: "  kcm context\n  kcm ctx kind-local\n  kcm context customer-a --file ~/.kube/prod/customer.yaml"}
+	contextCmd := &cobra.Command{Use: "context [name|-]", Short: "Select a context in this profile; omit name for fzf", Long: "Select a context for this shell without writing current-context to the source file. Use '-' to return to the previous context. Duplicate names require --file or interactive selection.", Args: cobra.MaximumNArgs(1), Example: "  kcm context\n  kcm context kind-local\n  kcm context customer-a --file ~/.kube/prod/customer.yaml"}
 	var file string
 	contextCmd.Flags().StringVar(&file, "file", "", "Disambiguate by source kubeconfig path")
 	contextCmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -162,75 +162,30 @@ func newCommand(version string, shell bool) *cobra.Command {
 		reset(cmd.OutOrStdout(), currentProfile())
 		return nil
 	}})
-	root.AddCommand(&cobra.Command{Use: "renew", Short: "Explicitly restart the active context's configured timeout", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
-		if e := needShell(); e != nil {
-			return e
+	root.AddCommand(renewCommand(load, needShell), statusCommand(load), printSelectionCommand(load, true), printSelectionCommand(load, false))
+	root.AddCommand(&cobra.Command{Use: "prompt", Short: "Print compact profile/context information for Starship", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		s, err := load()
+		if err != nil {
+			return err
 		}
-		s, e := load()
-		if e != nil {
-			return e
+		profile := currentProfile()
+		name := os.Getenv("KCM_CONTEXT")
+		if name == "" {
+			name = "—"
 		}
-		c, e := s.active()
-		if e != nil {
-			return e
+		suffix := ""
+		if deadline, err := strconv.ParseInt(os.Getenv("KCM_EXPIRES_AT"), 10, 64); err == nil {
+			remaining := time.Until(time.Unix(deadline, 0))
+			if remaining <= 0 {
+				suffix = " · expired"
+			} else {
+				suffix = " · " + remaining.Round(time.Second).String() + " left"
+			}
 		}
-		v := ""
-		if d := s.timeout(currentProfile(), c.File); d > 0 {
-			v = strconv.FormatInt(time.Now().Add(d).Unix(), 10)
-		}
-		emit(cmd.OutOrStdout(), "KCM_SETTINGS", s.Path)
-		emit(cmd.OutOrStdout(), "KCM_EXPIRES_AT", v)
-		s.emitPromptMetadata(cmd.OutOrStdout(), currentProfile())
+		fmt.Fprintf(cmd.OutOrStdout(), "%s %s · %s%s", s.Profiles[profile].Emoji, profile, name, suffix)
 		return nil
 	}})
-	for _, name := range []string{"status", "prompt"} {
-		name := name
-		short := "Show profile, context, namespace, and expiry"
-		if name == "prompt" {
-			short = "Print compact profile/context information for Starship"
-		}
-		root.AddCommand(&cobra.Command{Use: name, Short: short, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
-			s, e := load()
-			if e != nil {
-				return e
-			}
-			p := currentProfile()
-			context := os.Getenv("KCM_CONTEXT")
-			if context == "" {
-				context = "—"
-			}
-			expiry := "disabled"
-			if v, e := strconv.ParseInt(os.Getenv("KCM_EXPIRES_AT"), 10, 64); e == nil {
-				d := time.Until(time.Unix(v, 0))
-				if d <= 0 {
-					expiry = "expired"
-				} else {
-					expiry = d.Round(time.Second).String() + " left"
-				}
-			}
-			if name == "prompt" {
-				suffix := ""
-				if expiry != "disabled" {
-					suffix = " · " + expiry
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s %s · %s%s", s.Profiles[p].Emoji, p, context, suffix)
-				return nil
-			}
-			ns := "—"
-			if os.Getenv("KCM_CONTEXT") != "" {
-				c, e := s.active()
-				if e != nil {
-					return e
-				}
-				ns = c.Namespace
-				if ns == "" {
-					ns = "default"
-				}
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Profile:   %s\nContext:   %s\nNamespace: %s (shared)\nConfig:    %s\nTimeout:   %s\n", p, context, ns, os.Getenv("KUBECONFIG"), expiry)
-			return nil
-		}})
-	}
+
 	var quiet bool
 	doctor := &cobra.Command{Use: "doctor", Short: "Validate settings, profile configs, root waivers, and fzf", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		s, e := load()
