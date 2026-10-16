@@ -188,12 +188,31 @@ timer. Renewals affect only this shell. Later context selections apply normal
 profile rules and can shorten an extended deadline; selecting an untimed context
 clears it. Switching profiles or clearing the selection also clears the timer.
 
-- At a **stale prompt**, pressing Enter resets the profile to `local`, clears
-  the context and `KUBECONFIG` selection, and **cancels the entire submitted
-  command line**. A notice tells you what happened.
+- At a **stale prompt**, pressing Enter resets the profile to `local`, selects
+  a local context automatically, and **cancels the entire submitted command
+  line**. A notice tells you which context was selected.
 - If time expires while a command is running, KCM resets at the next prompt.
 - Nothing runs in the background. Credentials are not expired or revoked.
   Running tools and scripts continue normally.
+
+Automatic local selection is enabled by default. Set this top-level option in
+`~/.config/kcm/kcm_config.toml` to return without selecting a context instead:
+
+```toml
+auto_revert_local = false
+```
+
+With automatic selection enabled, KCM uses the only eligible local context if
+there is one. Otherwise it prefers contexts from the file named `config` in the
+local profile directory, then the first remaining context. Within those groups,
+contexts are sorted by name and then source path. Symlinks retain their link
+paths. Waived non-local contexts are never automatic return targets.
+
+Expiry clears the old deadline and previous-context history. If there are no
+eligible local contexts, or settings/config discovery fails, the shell returns
+to local without a context selected. KCM does not change a source file's stored
+`current-context`. New shells still start without a context selected. Open a new
+shell after upgrading to load the updated expiry hook.
 
 This is an interactive-shell reminder, not an access-control boundary. Custom
 widgets that bypass `accept-line`, other shell integrations that replace KCM's

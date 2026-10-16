@@ -292,6 +292,15 @@ func newCommand(version string, shell bool) *cobra.Command {
 		return child.Run()
 	}})
 	root.AddCommand(&cobra.Command{Use: "version", Short: "Show the development version", Args: cobra.NoArgs, Run: func(cmd *cobra.Command, args []string) { fmt.Fprintln(cmd.OutOrStdout(), "kcm", version) }})
+	if shell {
+		root.AddCommand(&cobra.Command{Use: "__expire", Hidden: true, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+			s, err := load()
+			if err != nil {
+				return err
+			}
+			return s.expireToLocal(cmd.OutOrStdout())
+		}})
+	}
 	if !shell {
 		root.AddCommand(&cobra.Command{Use: "__shell", Hidden: true, DisableFlagParsing: true, RunE: func(cmd *cobra.Command, args []string) error {
 			sub := newCommand(version, true)

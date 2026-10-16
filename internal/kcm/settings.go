@@ -25,11 +25,12 @@ type Profile struct {
 }
 
 type Settings struct {
-	Root       string             `toml:"kube_root"`
-	LocalHosts []string           `toml:"local_hosts"`
-	LocalCIDRs []string           `toml:"local_cidrs"`
-	Profiles   map[string]Profile `toml:"profiles"`
-	Path       string             `toml:"-"`
+	AutoRevertLocal bool               `toml:"auto_revert_local"`
+	Root            string             `toml:"kube_root"`
+	LocalHosts      []string           `toml:"local_hosts"`
+	LocalCIDRs      []string           `toml:"local_cidrs"`
+	Profiles        map[string]Profile `toml:"profiles"`
+	Path            string             `toml:"-"`
 }
 
 func settingsPath() string {

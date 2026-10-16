@@ -52,7 +52,8 @@ The sequence shows:
 3. Namespace selection and shared namespace status.
 4. Setting and extending a session deadline, and printing kubeconfig/context values.
 5. Importing and renaming a config into another profile.
-6. Production expiry cancelling a submitted command and returning to local.
+6. Production expiry cancelling a submitted command and automatically restoring
+   the local context, with its real kubeconfig path visible in status.
 
 The tape uses screen-content waits at picker transitions and short pauses for
 reading. Synthetic paths and countdown values can vary between recordings;

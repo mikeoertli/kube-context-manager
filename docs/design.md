@@ -49,8 +49,18 @@ names in different files are disambiguated by source path in the switcher or
    profile picker also requires a context selection, then starts that context's
    configured timer. It emits shell changes only after both selections succeed;
    cancellation or failure at either step leaves the existing shell state intact.
-6. Expiry clears context, file, previous selection, and deadline, sets profile
-   to local, and sets `KUBECONFIG=/dev/null`.
+6. Expiry clears context, file, previous selection, and deadline and sets profile
+   to local. With `auto_revert_local = true` (default), it discovers local
+   contexts and selects the only eligible context, otherwise preferring the file
+   named `config`, then the first context by name/path. It excludes waived
+   non-local contexts, preserves symlink paths, and does not write configs. The
+   expired deadline is cleared. Disabled selection, empty discovery, or errors
+   leave `KUBECONFIG=/dev/null` with no context selected.
+
+Local discovery invokes Go once per expiry, never on ordinary prompt refreshes.
+The shell clears the expired selection before discovery, so a failed settings
+load, unreadable config, or missing executable cannot leave the expired context
+active. An Enter-submitted command remains cancelled even after local restoration.
 
 Zsh wraps the `accept-line` ZLE widget. Bash uses a readline macro that runs a
 `bind -x` function before `accept-line`. If the deadline has passed, the handler

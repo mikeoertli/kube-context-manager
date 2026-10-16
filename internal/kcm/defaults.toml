@@ -1,5 +1,9 @@
 # ~/.config/kcm/kcm_config.toml
 kube_root = "~/.kube"
+# On expiry, automatically select a local context. Prefer the file named
+# "config" when several exist; otherwise use the first by context name/file path.
+# Set false to return to the local profile without selecting a context.
+auto_revert_local = true
 # Loopback IPs and localhost are always local. No DNS lookups are performed.
 local_hosts = [] # e.g. ["kubernetes.docker.internal"]
 local_cidrs = [] # e.g. ["192.168.49.2/32"] for a particular Minikube IP

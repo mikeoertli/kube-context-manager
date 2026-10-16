@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — Work in progress
+
+- Automatically select a local context on expiry, preferring the file named
+  `config`, then the first context by name/path. Disable with `auto_revert_local = false`.
+- Keep stale-command cancellation and fall back to an unselected local profile
+  when no suitable local context is available.
+
 ## 0.6.0 — 2026-10-08
 
 - Add `kcm renew --for DURATION` and `--extend DURATION` for one-off shell deadlines.

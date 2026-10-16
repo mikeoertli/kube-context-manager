@@ -117,7 +117,7 @@ Sleep 3s
 Type "kcm status"
 Enter
 Sleep 3s
-Type "# Back to local. Other shells are unchanged."
+Type "# Local context restored. Other shells are unchanged."
 Enter
 Sleep 2s
 Hide

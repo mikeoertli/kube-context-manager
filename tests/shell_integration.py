@@ -147,8 +147,60 @@ def main():
                 check_isolation(executable, kind, binary, settings, base, root)
         if args.fzf:
             check_picker(zsh, binary, settings, base, root, pathlib.Path(args.fzf).resolve())
+        if not args.only_picker:
+            for executable, kind in targets:
+                check_local_return(executable, kind, binary, settings, base, root)
         if not args.bash and not args.only_picker:
             print("SKIP bash PTY tests: supply --bash /path/to/bash (4.4+)")
+
+
+def check_local_return(executable, kind, binary, settings, base, root):
+    local_file = root / "config"
+    local_file.write_text(json.dumps({"apiVersion": "v1", "kind": "Config",
+        "clusters": [{"name": "local", "cluster": {"server": "https://127.0.0.1:6443"}}],
+        "contexts": [{"name": "local-lab", "context": {"cluster": "local"}}],
+        "current-context": "local-lab"}))
+    original = local_file.read_bytes()
+    original_settings = settings.read_text()
+    a = Shell(executable, kind, binary, settings)
+    b = Shell(executable, kind, binary, settings)
+    try:
+        a.command("kcm profile prod; kcm context remote")
+        b.command("kcm profile prod; kcm context second")
+        state = base / (kind + "-local-return")
+        clock = "$EPOCHSECONDS" if kind == "zsh" else "$(printf '%(%s)T' -1)"
+        a.command("export KCM_EXPIRES_AT=$(( " + clock + " + 2 ))")
+        time.sleep(2.2)
+        cancelled = base / (kind + "-cancelled-after-return")
+        a.send("printf wrong > " + shlex.quote(str(cancelled)))
+        output = a.prompt()
+        assert "local context local-lab" in output and "submitted command cancelled" in output, output
+        assert not cancelled.exists(), "Expired command ran after local restoration"
+        a.command("kcm kc; kcm ctx")
+        a.command("printf '%s|%s|%s|%s|%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" \"$KUBECONFIG\" \"${KCM_EXPIRES_AT:-}\" \"${KCM_PREVIOUS_CONTEXT:-}\" \"$KCM_PROMPT_TEXT_local\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "local|local-lab|" + str(local_file) + "|||🏠 local · local-lab", state.read_text()
+        b.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "prod|second", "Return changed another shell"
+        assert local_file.read_bytes() == original, "Return edited the local kubeconfig"
+
+        # Settings are read at expiry, including changes made after shell init.
+        settings.write_text(original_settings + "\nauto_revert_local = false\n")
+        a.command("kcm profile prod; kcm context remote")
+        a.command("export KCM_EXPIRES_AT=1")
+        a.command("printf '%s|%s|%s' \"$KCM_PROFILE\" \"${KCM_CONTEXT:-}\" \"$KUBECONFIG\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "local||/dev/null", state.read_text()
+
+        settings.write_text(original_settings)
+        a.command("kcm profile prod; kcm context remote")
+        settings.write_text("malformed = [\n")
+        a.command("export KCM_EXPIRES_AT=1")
+        a.command("printf '%s|%s|%s' \"$KCM_PROFILE\" \"${KCM_CONTEXT:-}\" \"$KUBECONFIG\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "local||/dev/null", "Failed settings load retained remote state"
+        print("PASS", kind, "automatic local return, cancellation, shell isolation, config opt-out, invalid-settings fallback")
+    finally:
+        a.close()
+        b.close()
+        settings.write_text(original_settings)
 
 
 def check_isolation(executable, kind, binary, settings, base, root):

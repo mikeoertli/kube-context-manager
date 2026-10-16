@@ -102,7 +102,7 @@ kcmk9s() {
 }
 
 _kcm_expire() {
-    local _kcm_now
+    local _kcm_now _kcm_local_code
     case "${KCM_EXPIRES_AT:-}" in ''|*[!0-9]*) return 0 ;; esac
     if [ -n "${ZSH_VERSION:-}" ]; then
         _kcm_now=${EPOCHSECONDS:-0}
@@ -113,7 +113,16 @@ _kcm_expire() {
     export KCM_PROFILE=local KUBECONFIG=/dev/null
     unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE
     _KCM_PROFILE_EMOJI=${_KCM_LOCAL_EMOJI:-🏠}
+    # Start from an unselected local state even if settings or discovery fail.
+    # Only an actual expiry invokes Go; normal prompt rendering stays shell-only.
+    if [ -n "${_KCM_BIN:-}" ] && _kcm_local_code=$("$_KCM_BIN" __shell __expire); then
+        eval "$_kcm_local_code"
+    fi
     _kcm_update_prompt
-    printf '\n🏠 kcm: session expired; switched to local. Select a context with kcm.\n' >&2
+    if [ -n "${KCM_CONTEXT:-}" ]; then
+        printf '\n🏠 kcm: session expired; switched to local context %s.\n' "$KCM_CONTEXT" >&2
+    else
+        printf '\n🏠 kcm: session expired; switched to local. Select a context with kcm.\n' >&2
+    fi
     return 1
 }
