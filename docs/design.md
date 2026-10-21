@@ -99,6 +99,44 @@ check that the source contents have not changed during the wizard and archive
 the original before deleting it. Certificate/key files are embedded. Token-file
 and executable references are made absolute, not copied or removed.
 
+Successful `kcm import` operations emit shell selection only after installation
+finishes, using the installed context name and exact destination path. Selection
+resets previous-context history and starts the destination profile's timeout.
+`--import-only`, dry runs, failures, and cancellation leave selection unchanged.
+The shell integration keeps import messages on stderr and evaluates only generated
+exports from stdout. Direct binary calls require `--import-only` or `--dry-run`.
+For all-context imports, activation uses the valid source current-context, then
+the first context by name.
+
+`kcm import` adds source discovery and optional readability prompts around the
+same install pipeline. Default discovery uses filename heuristics in Desktop and
+Downloads, then selects the newest match; explicit directories can list any
+regular file. File selection is non-recursive, sorted by modification time and
+path, and uses fzf with sorting disabled so search results retain that order.
+Only the selected file is parsed as a kubeconfig. Generated/complex-name detection
+is a naming heuristic, never a cluster or permission check. Imports rename the
+in-memory selected config before publication; source files remain unchanged for
+copies selected with `--import-copy`. File imports otherwise move, requiring all
+source contexts and archiving the exact original before removing the source.
+Clipboard imports read text into private temporary storage without modifying the
+clipboard, then use the same validation/import pipeline. Relative credential
+paths use the current directory as their source origin; temporary data is removed
+when the command returns, including on failure and dry run. Clipboard readers
+run only when `--clipboard` is explicitly requested. `--readable` and
+`--skip-readable` control prompts/label defaults, and `--no-prompt` preserves
+labels unless the caller explicitly requests changes.
+
+`kcm rename` edits a whole file in place. It updates all context references to
+renamed clusters/users, rejects collisions, and sets the stored current-context
+to the renamed context. It does not minify or flatten credentials. The exact
+original is archived exclusively under `kube_root/archive/` before replacing the
+resolved target atomically, leaving symlinks intact. Content and symlink-target
+checks reject changes made during interactive input; this does not lock out
+simultaneous writers after those checks. Cancellation, validation errors, dry
+runs, and unchanged requests do not write either file. The integrated shell
+refreshes matching active/previous context names only after a successful write;
+the profile, selected link path, and deadline remain unchanged.
+
 Imports into the root must contain only locally classified endpoints. Existing
 root files may contain non-local contexts only with explicit waivers. All root
 contexts must pass validation, even when selecting another profile, so malformed

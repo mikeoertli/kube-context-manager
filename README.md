@@ -14,10 +14,11 @@ It does not create per-shell kubeconfig copies or change a source file's
 
 ## Demo
 
-![KCM demo: profile and context selection, namespaces, import, and expiry](assets/demo.gif)
+![KCM demo: profile and context selection, namespaces, and expiry](assets/demo.gif)
 
-Recorded with synthetic configs and a simulated namespace API. The demo uses a
-six-second production timeout to show expiry; the normal default is eight hours.
+A quick look at listing contexts, selecting a profile and context, namespaces,
+and expiry. Recorded with synthetic configs and a simulated namespace API.
+The demo uses a six-second production timeout; the normal default is eight hours.
 The active menu choice is highlighted in bright pink with black text.
 Try it with `make demo`, or regenerate the GIF with `make demo-gif`.
 See the [demo guide and VHS sequence](demo/README.md) for dependencies and details.
@@ -250,6 +251,96 @@ shell function recognizes the new alias correctly.
 
 ## Import kubeconfigs
 
+`kcm import` finds a recent download, guides profile/name choices, and offers
+to simplify generated or complex names:
+
+```sh
+kcm import                              # newest filename match on Desktop/Downloads
+kcm import --select                     # search those matches, newest first
+kcm import --dir ~/Downloads --profile dev  # searchable directory picker
+kcm import --file ./download.yaml --profile qa --name api-qa
+
+# Import with readable labels:
+kcm import --file ./download.yaml --profile dev --name api-dev \
+  --readable --no-prompt
+
+# Preserve the file's labels:
+kcm import ./download.yaml --profile qa --name api-qa \
+  --skip-readable --no-prompt
+
+# Keep the original file rather than moving it:
+kcm import ./download.yaml --profile dev --name api-dev --import-copy
+
+# Import kubeconfig text copied to the clipboard:
+kcm import --clipboard --profile dev --name api-dev --readable
+
+# Import for later use without changing this shell:
+kcm import ./download.yaml --profile dev --name api-dev --import-only --no-prompt
+```
+
+Default discovery looks only at direct files in `~/Desktop` and `~/Downloads`,
+matching names containing `.kubeconfig`, or extensionless names containing
+`kube` or `config`, case insensitively. It selects the newest by modification
+time; ties use the absolute path. Filename discovery does not validate contents:
+the selected file must pass kubeconfig validation before import. Missing default
+directories are ignored; no matches produce an error with explicit source options.
+
+`--file PATH` (or a file argument) accepts any filename and bypasses discovery.
+`--dir DIR` (or a directory argument) searches all regular files in that directory,
+without recursion. File pickers show modification times and retain newest-first
+order while filtering. With `--no-prompt`, a directory source uses its newest
+regular file directly. Use `--file` to pin the exact source in a script.
+
+`--name` is the exact destination filename (also available as `--filename`),
+relative to the chosen profile directory. Namespaces are preserved unless
+`--namespace` is given. File imports **move by default**: KCM verifies the
+destination, archives the exact original under `kube_root/archive/`, then removes
+the source. Use `--import-copy` to leave the source file in place. Moving requires
+every source context; choose `--all-contexts` or use `--import-copy` for a partial
+import. Symlink sources also require `--import-copy`. Successful imports select
+the imported profile and context for this shell and start the profile's configured
+timeout. Use `--import-only` to leave the current selection unchanged. With
+`--all-contexts`, KCM selects the source's valid `current-context`, falling back to
+the first context by name. Dry runs and failed or cancelled imports do not change
+the shell selection.
+
+Automatic selection requires the `kcm init` shell integration. In scripts that
+call the binary directly, use `--import-only` (or `--dry-run` for validation).
+After upgrading, start a new shell or re-run `eval "$(kcm init zsh)"` (or bash)
+to load the updated import integration.
+
+`kcm install` retains its original copy default and
+`--move`/`--copy` flags; `kcm import` uses `--import-copy` instead.
+
+`--clipboard` accepts kubeconfig text instead of a file, directory, or default
+download. It reads without clearing or modifying the clipboard. Content is
+staged privately (directory `0700`, file `0600`), validated, imported, and the
+temporary file removed on success, failure, or dry run. The default destination
+name is `clipboard.kubeconfig`; use `--name` to change it. Relative certificate,
+key, token-file, and executable paths resolve from the current directory, so run
+the command where those references are available. Clipboard support uses
+`pbpaste` on macOS, or `wl-paste`, `xclip`, or `xsel` on Linux.
+
+Interactive imports offer readability updates if labels or the destination
+filename look generated or complex: UUIDs, long hexadecimal IDs, names over
+48 characters, or punctuation beyond letters, digits, `.`, `_`, and `-`.
+`--readable` always enables the naming step; `--skip-readable` suppresses it and
+preserves labels. The skip flag cannot be combined with individual rename flags.
+
+With `--readable --name api-dev`, suggested labels are `api-dev` for the cluster
+and context and `api-dev-user` for the user. Common config extensions are removed
+from that base. If the filename itself is complex, defaults use `PROFILE-cluster`
+and `PROFILE-cluster-user`. Anonymous contexts remain anonymous. Interactive
+prompts let you override each label; scripts use these defaults. Individual
+`--rename-cluster`, `--rename-user`, and `--rename-context` flags override them.
+
+`--no-prompt` preserves labels unless `--readable` or explicit rename flags are
+supplied. Remote sources require `--profile` in scripted use. Multi-context files
+require `--context NAME` or `--all-contexts` without prompts; readability updates
+require a single selected context. Use `--dry-run` to preview without writing.
+
+`kcm install` remains available for explicit source paths and its original wizard:
+
 ```sh
 kcm install ~/Downloads/customer.yaml       # interactive wizard
 
@@ -280,6 +371,50 @@ token files and auth helpers must remain available. Copy is the default;
 `--move` requires importing every source context, verifies the installed config,
 and archives the original under `kube_root/archive/` before removing the source.
 New config and archive files have mode `0600`.
+
+## Make an existing kubeconfig readable
+
+`kcm rename` (alias `kcm make-readable`) renames entries **in place**, with a
+backup of the exact original file. Use the wizard or supply flags:
+
+```sh
+kcm rename                             # use this shell's selected file/context
+kcm rename ./download.yaml             # prompt for readable names and confirm
+
+kcm rename ./download.yaml --context old-context \
+  --rename-cluster api-dev --rename-user dev-reader \
+  --rename-context api-dev --no-prompt
+
+kcm rename --rename-context api-dev --no-prompt --dry-run
+```
+
+Without a selected file, the wizard offers files in the current profile or lets
+you enter another path. Source context selection follows `--context`, then this
+shell's selection when it refers to that file, then the file's valid
+`current-context`, then the first context by name. Omitted names are prompted
+interactively and preserved with `--no-prompt`. A context with no user stays
+anonymous. Use `--namespace NAME` to change only the selected context's
+namespace, or `--namespace ''` to clear it; otherwise namespaces are preserved.
+
+Cluster and user renames update **all references in that file**. Other contexts,
+unused entries, credentials, extensions, and relative file references are
+preserved. The file's stored `current-context` becomes the resulting context.
+Existing names cannot be overwritten. No cluster requests or credential helpers
+run, and neither `yq` nor `gum` is required.
+
+Before writing, KCM checks that the source has not changed during the wizard and
+archives its original bytes under `kube_root/archive/` with a unique filename.
+An unsuccessful backup prevents the edit. Writes are atomic with mode `0600`;
+symlinks remain links and their target file is updated. The output includes the
+backup path and commands to compare or restore it. `--dry-run` writes nothing;
+an unchanged request also creates no backup. YAML formatting/comments may change.
+
+With shell integration, renaming the active or previous context updates that
+shell's selection without extending its deadline. The plan/backup summary goes
+to stderr so stdout can carry the shell update internally. Other open shells
+using the old name need to reselect it. Open a new shell after upgrading to load
+the updated integration. If a renamed root context had a waiver, recreate the
+waiver using its new name with `kcm waive NAME --file PATH`.
 
 ## Namespace picker and creation
 
@@ -429,6 +564,8 @@ Namespace remains available through `kcm status`.
 | `kcm kc`, `kcm ctx` | Print the selected kubeconfig path or context name |
 | `kcm clear`, `kcm renew [--for DURATION\|--extend DURATION]` | Clear selection, restart, or extend its timer |
 | `kcm install PATH` | Import, rename, copy, or move configs |
+| `kcm import [PATH]` | Import and select a context; use `--import-only` to keep the current selection |
+| `kcm rename [PATH]` | Make existing config names readable, with backup and optional dry run |
 | `kcm waive NAME`, `kcm unwaive NAME`, `kcm waivers` | Manage root exceptions |
 | `kcm doctor` | Validate settings and config layout |
 | `kcm init SHELL`, `kcm completion SHELL` | Generate integration and completions |
@@ -438,7 +575,8 @@ Namespace remains available through `kcm status`.
 | `kcm version`, `kcm help [COMMAND]` | Version and help |
 
 Every `kcm` command supports `--help`; wrapper arguments pass through to the client.
-Aliases: `kc` for `print-kubeconfig`, `ctx` for `print-context-name`, `ns` for `namespace`. See
+Aliases: `kc` for `print-kubeconfig`, `ctx` for `print-context-name`, `ns` for `namespace`,
+and `make-readable` for `rename`. See
 [complete command help](docs/commands.md) and [behavior details](docs/design.md).
 
 ## Development

@@ -29,6 +29,15 @@ func reset(w io.Writer, profile string) {
 }
 
 func choose(header string, rows []string) (int, error) {
+	return chooseWithOptions(header, rows, nil)
+}
+
+// File pickers retain modification-time order even after filtering a query.
+func chooseOrdered(header string, rows []string) (int, error) {
+	return chooseWithOptions(header, rows, []string{"--no-sort"})
+}
+
+func chooseWithOptions(header string, rows []string, options []string) (int, error) {
 	if len(rows) == 0 {
 		return 0, fmt.Errorf("nothing available to select")
 	}
@@ -41,6 +50,7 @@ func choose(header string, rows []string) (int, error) {
 	}
 	cmd := exec.Command("fzf", "--no-multi", "--delimiter=\t", "--with-nth=2..", "--layout=reverse", "--height=70%", "--border", "--header="+header, "--prompt=› ",
 		"--highlight-line", "--color=fg+:#000000,bg+:#ff5faf,hl+:#000000,pointer:#000000")
+	cmd.Args = append(cmd.Args, options...)
 	// User fzf options must not add shell previews, alter records, or select many.
 	cmd.Env = filteredEnv("FZF_DEFAULT_OPTS", "FZF_DEFAULT_OPTS_FILE", "FZF_DEFAULT_COMMAND")
 	cmd.Stdin = strings.NewReader(strings.Join(lines, "\n"))

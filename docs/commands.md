@@ -20,6 +20,7 @@ Available Commands:
   doctor             Validate settings, profile configs, root waivers, and fzf
   exec               Run a supported client with the shell-selected context
   help               Help about any command
+  import             Import a kubeconfig, suggesting the newest download and readable names
   init               Print shell integration (source it in your startup file)
   install            Import a kubeconfig, with optional readable names and copy/move
   list               List discovered contexts grouped by profile, with current selections marked
@@ -30,6 +31,7 @@ Available Commands:
   profile            Change profile; omit name to pick a profile and context
   profiles           List profile directories and default timeouts
   prompt             Print compact profile/context information for Starship
+  rename             Rename kubeconfig entries in place, with an original backup
   renew              Restart or extend this shell's active context timeout
   settings           Locate or initialize TOML settings
   status             Show this shell's selection and timeout in a readable summary
@@ -239,6 +241,80 @@ Flags:
       --rename-cluster string   New cluster display name
       --rename-context string   New context display name
       --rename-user string      New user display name
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm import`
+
+```text
+With no source, use the newest filename match in ~/Desktop and ~/Downloads: a name containing .kubeconfig, or an extensionless name containing kube or config (case insensitive). --select opens a searchable picker for those matches. A supplied directory opens a searchable list of its regular files, newest first; --no-prompt uses the newest directly. A supplied file bypasses discovery. --clipboard reads kubeconfig content without clearing the clipboard; relative credential paths resolve from the current directory. Selected content is validated before import. Choose a destination profile and filename, and optionally make messy labels readable. --readable forces name updates; --skip-readable preserves labels. With --no-prompt, omitted labels are preserved unless --readable is supplied. File imports move by default, archiving the original before removing it after a verified import. --import-copy retains the source file. Moving requires every source context; use --all-contexts or --import-copy when selecting from a multi-context file. Existing destinations are never overwritten. Successful imports select the destination profile and imported context for this shell, starting its configured timeout. --import-only preserves the shell selection. With --all-contexts, select the source current-context if valid, otherwise the first context by name. Shell integration is required unless using --import-only or --dry-run.
+
+Usage:
+  kcm import [path] [flags]
+
+Examples:
+  kcm import
+  kcm import --select
+  kcm import --dir ~/Downloads --profile dev
+  kcm import --file ./download.yaml --profile dev --name api-dev --readable --no-prompt
+  kcm import ./download.yaml --profile qa --name api-qa --import-copy --skip-readable --no-prompt
+  kcm import --clipboard --profile dev --name api-dev --readable
+  kcm import ./download.yaml --profile dev --import-only --no-prompt
+
+Flags:
+      --all-contexts            Import every context into the destination profile
+      --clipboard               Read kubeconfig content from the clipboard without clearing it
+      --context string          Source context to import (required when ambiguous)
+      --dir string              Browse this directory's files, newest first (no recursion)
+      --dry-run                 Validate and print the plan without writing
+      --file string             Explicit source file (bypasses automatic discovery)
+      --filename string         Destination basename (default: source basename)
+  -h, --help                    help for import
+      --import-copy             Keep the source file instead of moving it (file imports move by default)
+      --import-only             Import without changing this shell's profile or context
+      --name string             Destination filename and suggested base for readable labels
+      --namespace string        Installed namespace (default: preserve)
+      --no-prompt               Do not prompt; preserve names unless --readable or rename flags are supplied
+      --profile string          Destination profile
+      --readable                Make selected cluster/user/context labels readable; --name supplies the base
+      --rename-cluster string   New cluster display name
+      --rename-context string   New context display name
+      --rename-user string      New user display name
+      --select                  Search Desktop/Downloads filename matches rather than choosing the newest
+      --skip-readable           Preserve cluster/user/context labels without readability prompts
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm rename`
+
+```text
+Give a kubeconfig's cluster, user, and context readable names. Defaults to this shell's selected file/context; otherwise choose a file interactively. For a supplied file, use --context to select an entry, or default to its valid current-context, then the first context by name. Other contexts are preserved, and references to renamed clusters/users are updated throughout the file. Set the file's current-context to the resulting context. Preserve namespaces unless --namespace is supplied. Refuse name collisions and archive the exact original under kube_root/archive before writing. Symlinks remain links. No cluster access, yq, or gum is required.
+
+Usage:
+  kcm rename [path] [flags]
+
+Aliases:
+  rename, make-readable
+
+Examples:
+  kcm rename
+  kcm rename ./download.yaml
+  kcm rename ./download.yaml --rename-cluster dev --rename-user dev-reader --rename-context dev --no-prompt
+  kcm rename --rename-context api-dev --no-prompt --dry-run
+
+Flags:
+      --context string          Source context (default: shell selection, current-context, or first by name)
+      --dry-run                 Validate and show the plan without creating a backup or writing
+  -h, --help                    help for rename
+      --namespace string        Selected context's namespace (default: preserve; empty clears it)
+      --no-prompt               Apply supplied choices without prompting; preserve omitted names
+      --rename-cluster string   New cluster display name; updates all references in this file
+      --rename-context string   New context display name
+      --rename-user string      New user display name; updates all references in this file
 
 Global Flags:
       --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")

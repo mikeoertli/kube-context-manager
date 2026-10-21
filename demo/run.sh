@@ -14,6 +14,6 @@ trap 'rm -rf -- "$runtime"' EXIT
 python3 "$repo/demo/fixtures.py" "$runtime"
 printf 'source %q\n' "$repo/demo/shell.zsh" > "$runtime/.zshrc"
 # env -i drops inherited KCM state, credentials, shell hooks and fzf options.
-env -i PATH="$repo/demo/bin:$repo/bin:$PATH" TERM="${TERM:-xterm-256color}" \
+env -i PATH="$runtime/clipboard-bin:$repo/demo/bin:$repo/bin:$PATH" TERM="${TERM:-xterm-256color}" \
     LANG=en_US.UTF-8 ZDOTDIR="$runtime" KCM_SETTINGS="$runtime/settings.toml" \
     KCM_DEMO_DIR="$runtime" KCM_PROMPT_ENABLED=1 zsh -d -i

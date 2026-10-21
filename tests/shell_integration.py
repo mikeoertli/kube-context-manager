@@ -147,11 +147,172 @@ def main():
                 check_isolation(executable, kind, binary, settings, base, root)
         if args.fzf:
             check_picker(zsh, binary, settings, base, root, pathlib.Path(args.fzf).resolve())
+            check_import(zsh, binary, settings, base, root, pathlib.Path(args.fzf).resolve())
         if not args.only_picker:
             for executable, kind in targets:
                 check_local_return(executable, kind, binary, settings, base, root)
+                check_rename(executable, kind, binary, settings, base, root)
         if not args.bash and not args.only_picker:
             print("SKIP bash PTY tests: supply --bash /path/to/bash (4.4+)")
+
+
+def check_import(executable, binary, settings, base, root, fzf):
+    directory = base / "download-fixtures"
+    directory.mkdir()
+    sources = []
+    for name, age in [("a-old.kubeconfig", 7200), ("z-new.kubeconfig", 60)]:
+        path = directory / name
+        path.write_text(json.dumps({"apiVersion": "v1", "kind": "Config",
+            "clusters": [{"name": "opaque/generated/cluster", "cluster": {"server": "https://import.invalid"}}],
+            "users": [{"name": "opaque-user", "user": {"token": "fixture"}}],
+            "contexts": [{"name": "arn:example:cluster/dev", "context": {"cluster": "opaque/generated/cluster", "user": "opaque-user"}}],
+            "current-context": "arn:example:cluster/dev"}))
+        modified = time.time() - age
+        os.utime(path, (modified, modified))
+        sources.append((path, path.read_bytes()))
+    shell = Shell(executable, "zsh", binary, settings)
+    try:
+        shell.command("export PATH=" + shlex.quote(str(fzf.parent)) + ":$PATH")
+        shell.send("kcm import --dir " + shlex.quote(str(directory)) + " --profile qa --name imported")
+        output = shell.drain(0.6)
+        assert b"newest first" in output and output.find(b"z-new.kubeconfig") < output.find(b"a-old.kubeconfig"), output
+        shell.send("z-new", enter=b"")
+        shell.drain(0.3)
+        shell.send("")
+        output = shell.drain(0.4)
+        assert b"Make them readable?" in output, output
+        shell.send("no")
+        assert b"Import? (yes/no)" in shell.drain(0.3)
+        shell.send("no")
+        assert "cancelled" in shell.prompt()
+        assert not (root / "qa" / "imported").exists()
+
+        # Accept automatically offered readability and the suggested label defaults.
+        shell.send("kcm import --file " + shlex.quote(str(sources[1][0])) + " --profile qa --name imported --import-copy")
+        assert b"Make them readable?" in shell.drain(0.4)
+        shell.send("yes")
+        for label in [b"Readable cluster name [imported]", b"Readable user name [imported-user]", b"Readable context name [imported]"]:
+            output = shell.drain(0.3)
+            assert label in output, output
+            shell.send("")
+        assert b"Import? (yes/no)" in shell.drain(0.3)
+        shell.send("yes")
+        shell.prompt()
+        state = base / "import-state"
+        shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"${KCM_CONTEXT:-}\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "qa|imported", "Import did not activate the imported selection"
+        shell.command("kcm ctx > " + shlex.quote(str(state)))
+        assert state.read_text() == "imported\n"
+
+        # Explicit skip suppresses the readability offer, while filename remains editable.
+        shell.send("kcm import --file " + shlex.quote(str(sources[0][0])) + " --profile dev --skip-readable")
+        output = shell.drain(0.4)
+        assert b"Import name" in output and b"Make them readable" not in output, output
+        shell.send("preserved")
+        output = shell.drain(0.3)
+        assert b"Import? (yes/no)" in output and b"Readable" not in output, output
+        shell.send("no")
+        shell.prompt()
+        shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "qa|imported", "Cancelled import changed selection"
+        for path, original in sources:
+            assert path.read_bytes() == original, "Import changed a download"
+
+        # Default imports move only after archiving the exact source bytes.
+        path, original = sources[0]
+        shell.command("kcm import --file " + shlex.quote(str(path)) + " --profile dev --name moved --skip-readable --no-prompt --import-only")
+        assert not path.exists(), "Default import retained its source"
+        assert (root / "dev" / "moved").exists()
+        backups = list((root / "archive").glob("moved.original-*"))
+        assert len(backups) == 1 and backups[0].read_bytes() == original
+        shell.command("printf '%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "qa|imported", "--import-only changed selection"
+
+        # Stub every supported reader so tests never touch the real clipboard.
+        clipboard_bin = base / "clipboard-bin"
+        clipboard_bin.mkdir()
+        clipboard = sources[1][0]
+        for name in ["pbpaste", "wl-paste", "xclip", "xsel"]:
+            reader = clipboard_bin / name
+            reader.write_text("#!/bin/sh\nexec /bin/cat " + shlex.quote(str(clipboard)) + "\n")
+            reader.chmod(0o700)
+        shell.command("export PATH=" + shlex.quote(str(clipboard_bin)) + ":$PATH")
+        output = shell.command("kcm import --clipboard --profile dev --name pasted --readable --no-prompt")
+        assert "Source: clipboard" in output and "kcm-clipboard-" not in output, output
+        assert (root / "dev" / "pasted").exists()
+        shell.command("printf '%s|%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" \"$KUBECONFIG\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "dev|pasted|" + str(root / "dev" / "pasted"), "Clipboard import did not activate"
+        assert clipboard.read_bytes() == sources[1][1], "Clipboard import changed its content"
+        print("PASS zsh import: searchable picker, readability, cancellation, copy, move with backup, clipboard activation, import-only")
+    finally:
+        shell.close()
+
+
+def check_rename(executable, kind, binary, settings, base, root):
+    path = root / "dev" / (kind + "-rename.yaml")
+    path.parent.mkdir(exist_ok=True)
+    config = {"apiVersion": "v1", "kind": "Config",
+        "clusters": [{"name": "opaque-cluster", "cluster": {"server": "https://rename.invalid"}}],
+        "users": [{"name": "opaque-user", "user": {"token": "fixture"}}],
+        "contexts": [{"name": name, "context": {"cluster": "opaque-cluster", "user": "opaque-user", "namespace": "default"}} for name in ["opaque", "peer"]],
+        "current-context": "opaque"}
+    path.write_text(json.dumps(config))
+    original = path.read_bytes()
+    shell = Shell(executable, kind, binary, settings)
+    try:
+        state = base / (kind + "-rename-state")
+        shell.command("kcm profile dev; kcm context peer; kcm context opaque; kcm renew --for 24h")
+        shell.command("printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(state)))
+        deadline = state.read_text()
+        output = shell.command("kcm rename --rename-cluster dev --rename-user reader --rename-context api-dev --namespace app --no-prompt")
+        assert "Original backup:" in output and "Updated kubeconfig:" in output, output
+        shell.command("kcm ctx > " + shlex.quote(str(state)))
+        assert state.read_text() == "api-dev\n", "Shell did not refresh the renamed context"
+        shell.command("printf '%s' \"$KCM_EXPIRES_AT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == deadline, "Rename renewed the timeout"
+        backups = list((root / "archive").glob(path.name + ".original-*"))
+        assert len(backups) == 1 and backups[0].read_bytes() == original
+        shell.command("kcm rename --context peer --rename-context previous --no-prompt")
+        shell.command("printf '%s|%s' \"$KCM_CONTEXT\" \"$KCM_PREVIOUS_CONTEXT\" > " + shlex.quote(str(state)))
+        assert state.read_text() == "api-dev|previous", state.read_text()
+
+        # Exercise every missing-name prompt, then cancel at confirmation.
+        before = path.read_bytes()
+        backup_count = len(list((root / "archive").glob("*")))
+        shell.send("kcm make-readable")
+        assert b"Cluster name [dev]" in shell.drain(0.4)
+        shell.send("friendly-cluster")
+        assert b"User name [reader]" in shell.drain(0.3)
+        shell.send("")
+        assert b"Context name [api-dev]" in shell.drain(0.3)
+        shell.send("friendly-context")
+        assert b"Apply changes?" in shell.drain(0.3)
+        shell.send("no")
+        assert "rename cancelled" in shell.prompt()
+        assert path.read_bytes() == before and len(list((root / "archive").glob("*"))) == backup_count
+
+        shell.send("kcm make-readable --rename-cluster friendly-cluster --rename-user reader --rename-context friendly-context")
+        assert b"Apply changes?" in shell.drain(0.4)
+        shell.send("yes")
+        shell.prompt()
+        shell.command("kcm ctx > " + shlex.quote(str(state)))
+        assert state.read_text() == "friendly-context\n"
+
+        # A source edited while the confirmation is open must not be overwritten.
+        external = base / "changed.yaml"
+        external.write_bytes(original)
+        backup_count = len(list((root / "archive").glob("*")))
+        shell.send("kcm rename " + shlex.quote(str(external)) + " --rename-cluster new --rename-user reader --rename-context new")
+        assert b"Apply changes?" in shell.drain(0.4)
+        config["clusters"][0]["cluster"]["server"] = "https://changed.invalid"
+        external.write_text(json.dumps(config))
+        changed = external.read_bytes()
+        shell.send("yes")
+        assert "source changed during rename" in shell.prompt()
+        assert external.read_bytes() == changed and len(list((root / "archive").glob("*"))) == backup_count
+        print("PASS", kind, "rename: backup, active/previous selection refresh, unchanged timeout, prompts, cancellation, source-change rejection")
+    finally:
+        shell.close()
 
 
 def check_local_return(executable, kind, binary, settings, base, root):

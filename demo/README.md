@@ -15,10 +15,11 @@ not read your shell startup files or change your kubeconfigs. Type `exit` to
 leave; the temporary directory is removed automatically.
 
 The KCM binary, profile/context pickers, discovery, imports, namespace writes,
-and expiry hooks are real. Only namespace discovery and creation use a small
-fixture `kubectl` client. That client never forwards commands to an installed
-kubectl. All server names end in `.invalid`, and the fixture configs contain no
-credentials. Permissions checks and real workloads are not part of this demo.
+and expiry hooks are real. Namespace discovery and creation use a small
+fixture `kubectl` client, and clipboard readers return a synthetic kubeconfig.
+The demo never reads or changes your real clipboard or forwards commands to an
+installed kubectl. All server names end in `.invalid`, and the fixture configs
+contain no credentials. Permissions checks and real workloads are not part of this demo.
 The prompt displays KCM's exported text using zsh; Starship is not required.
 
 Production expires after **six seconds in the demo settings**, so the recording
@@ -50,10 +51,8 @@ The sequence shows:
 1. Profiles and their discovered contexts with `kcm list`.
 2. Profile selection followed directly by context selection.
 3. Namespace selection and shared namespace status.
-4. Setting and extending a session deadline, and printing kubeconfig/context values.
-5. Importing and renaming a config into another profile.
-6. Production expiry cancelling a submitted command and automatically restoring
-   the local context, with its real kubeconfig path visible in status.
+4. Production expiry cancelling a submitted command and automatically restoring
+   the local context, with its kubeconfig path visible in status.
 
 The tape uses screen-content waits at picker transitions and short pauses for
 reading. Synthetic paths and countdown values can vary between recordings;
@@ -61,10 +60,13 @@ reproducibility means the same workflow, not byte-identical GIFs.
 
 ## Keep it current
 
-When commands, picker behavior, shell hooks, displayed output, or demo fixtures
-change, update `demo/demo.tape` as needed and run `make demo-gif` in the same
-change. Also refresh it when a new capability should join the walkthrough.
-Review the rendered GIF for legible text, uncropped menus, successful commands,
-and the expiry reset. Keep it concise and use only generic, synthetic examples.
-Documentation-only changes that do not affect the walkthrough do not need a
-new recording. Keep the tape, supporting fixtures, GIF, and README in sync.
+Keep the GIF focused on the basics: discovery, selection, namespaces, and expiry.
+It does not need to demonstrate every feature. Detailed commands and advanced
+workflows belong in the usage documentation.
+
+When a change affects a demonstrated command, picker, shell hook, displayed
+output, or fixture, update `demo/demo.tape` as needed and run `make demo-gif` in
+the same change. Features outside the walkthrough do not require expanding or
+re-recording the GIF. Review the result for legible text, uncropped menus,
+successful commands, and the expiry reset. Use only generic, synthetic examples.
+Keep the tape, supporting fixtures, GIF, and README in sync.

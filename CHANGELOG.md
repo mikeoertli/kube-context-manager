@@ -1,6 +1,24 @@
 # Changelog
 
-## 0.7.0 — Work in progress
+## 0.8.0 — 2026-10-21
+
+- Shorten the README demo to the basic selection, namespace, and expiry workflow.
+
+- Select the imported profile and context after successful imports; add
+  `--import-only` to preserve the current shell selection.
+
+- Move file imports by default; retain the source with `--import-copy`.
+- Add `kcm import --clipboard` with private temporary staging, validation,
+  and current-directory resolution for relative credential references.
+- Add `kcm import` with newest Desktop/Downloads discovery, searchable directory
+  selection, profile/name options, and forced or skipped readability updates.
+- Keep file pickers ordered by modification time, newest first, including while searching.
+- Add interactive and scripted `kcm rename` (`make-readable`) for readable
+  cluster, user, and context names, preserving all entries and shared references.
+- Back up originals before in-place edits, reject collisions, preserve symlinks,
+  and refresh renamed shell selections without renewing their timeout.
+
+## 0.7.0 — 2026-10-21
 
 - Automatically select a local context on expiry, preferring the file named
   `config`, then the first context by name/path. Disable with `auto_revert_local = false`.

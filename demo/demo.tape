@@ -26,7 +26,7 @@ Show
 Sleep 2s
 Type "kcm list"
 Enter
-Sleep 4s
+Sleep 3s
 
 Hide
 Ctrl+L
@@ -57,37 +57,6 @@ Down
 Sleep 1500ms
 Enter
 Type "kcm status"
-Enter
-Sleep 3s
-
-Hide
-Ctrl+L
-Show
-Type "# Extend this session and print values for scripts"
-Enter
-Type "kcm renew --for 24h"
-Enter
-Type "kcm renew --extend 24h"
-Enter
-Type "kcm kc"
-Enter
-Type "kcm ctx"
-Enter
-Type "kcm status"
-Enter
-Sleep 3s
-
-Hide
-Ctrl+L
-Show
-Type "# Import and rename a kubeconfig into its profile"
-Enter
-Type "kcm install incoming.yaml --profile qa --rename-context api-qa --no-prompt"
-Enter
-Sleep 1200ms
-Type "kcm profile qa"
-Enter
-Type "kcm contexts"
 Enter
 Sleep 3s
 

@@ -63,7 +63,7 @@ kcm() {
         esac
     done
     case "$_kcm_cmd" in
-        profile|context|clear|renew) _kcm_mutate=1 ;;
+        profile|context|clear|renew|rename|make-readable|import) _kcm_mutate=1 ;;
     esac
     for _kcm_arg in "$@"; do
         case "$_kcm_arg" in -h|--help) _kcm_mutate=0 ;; esac

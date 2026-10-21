@@ -214,6 +214,8 @@ func newCommand(version string, shell bool) *cobra.Command {
 	doctor.Flags().BoolVar(&quiet, "quiet", false, "Print errors only")
 	root.AddCommand(doctor)
 	root.AddCommand(installCommand(load))
+	root.AddCommand(importCommand(load, shell))
+	root.AddCommand(renameCommand(load, shell))
 	addWaivers(root, load)
 	settings := &cobra.Command{Use: "settings", Short: "Locate or initialize TOML settings"}
 	settings.AddCommand(&cobra.Command{Use: "path", Short: "Print the effective settings path", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {

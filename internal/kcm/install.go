@@ -16,6 +16,9 @@ import (
 type installOptions struct {
 	Profile, Context, ClusterName, UserName, ContextName, Namespace, Filename string
 	All, Move, Copy, NoPrompt, DryRun                                         bool
+	ImportReadability                                                         string // empty for legacy install; auto, force, or skip for import
+	SourceBase, SourceLabel                                                   string // clipboard's reference directory and display label
+	OnInstalled                                                               func(Context) error
 }
 
 type wizard struct {
@@ -55,6 +58,11 @@ func installCommand(load func() (*Settings, error)) *cobra.Command {
 			}
 			return s.install(cmd, args[0], o)
 		}}
+	addInstallFlags(c, o, load)
+	return c
+}
+
+func addInstallFlags(c *cobra.Command, o *installOptions, load func() (*Settings, error)) {
 	f := c.Flags()
 	f.StringVar(&o.Profile, "profile", "", "Destination profile")
 	f.StringVar(&o.Context, "context", "", "Source context to import (required when ambiguous)")
@@ -64,14 +72,15 @@ func installCommand(load func() (*Settings, error)) *cobra.Command {
 	f.StringVar(&o.ContextName, "rename-context", "", "New context display name")
 	f.StringVar(&o.Namespace, "namespace", "", "Installed namespace (default: preserve)")
 	f.StringVar(&o.Filename, "filename", "", "Destination basename (default: source basename)")
-	f.BoolVar(&o.Move, "move", false, "Delete source only after a complete, verified import")
-	f.BoolVar(&o.Copy, "copy", false, "Keep source (default)")
+	if o.ImportReadability == "" {
+		f.BoolVar(&o.Move, "move", false, "Delete source only after a complete, verified import")
+		f.BoolVar(&o.Copy, "copy", false, "Keep source (default)")
+		c.MarkFlagsMutuallyExclusive("move", "copy")
+	}
 	f.BoolVar(&o.NoPrompt, "no-prompt", false, "Do not prompt; preserve omitted names")
 	f.BoolVar(&o.DryRun, "dry-run", false, "Validate and print the plan without writing")
-	c.MarkFlagsMutuallyExclusive("move", "copy")
 	c.MarkFlagsMutuallyExclusive("context", "all-contexts")
 	c.RegisterFlagCompletionFunc("profile", profileCompletion(load))
-	return c
 }
 
 func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) error {
@@ -168,7 +177,14 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 	if canonical(dir) == canonical(s.Root) && remote {
 		return fmt.Errorf("non-local configs belong in a non-root profile; choose dev, qa, prod, other, or a custom profile")
 	}
-	if w != nil && !o.All {
+	if o.ImportReadability != "" {
+		if o.Filename == "" {
+			o.Filename = filepath.Base(path)
+		}
+		if err := s.prepareImportNames(cmd, w, config, o); err != nil {
+			return err
+		}
+	} else if w != nil && !o.All {
 		ctx := config.Contexts[o.Context]
 		for _, field := range []struct {
 			flag, label, def string
@@ -187,34 +203,21 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 	}
 	if !o.All {
 		ctx := config.Contexts[o.Context]
-		if o.ClusterName != "" && o.ClusterName != ctx.Cluster {
-			if e := validName(o.ClusterName); e != nil {
-				return e
-			}
-			config.Clusters[o.ClusterName] = config.Clusters[ctx.Cluster]
-			delete(config.Clusters, ctx.Cluster)
-			ctx.Cluster = o.ClusterName
+		names := &renameOptions{Context: o.Context, ClusterName: ctx.Cluster, UserName: ctx.AuthInfo, ContextName: o.Context}
+		if o.ClusterName != "" {
+			names.ClusterName = o.ClusterName
 		}
-		if o.UserName != "" && o.UserName != ctx.AuthInfo {
-			if ctx.AuthInfo == "" {
-				return fmt.Errorf("cannot rename an absent user")
-			}
-			if e := validName(o.UserName); e != nil {
-				return e
-			}
-			config.AuthInfos[o.UserName] = config.AuthInfos[ctx.AuthInfo]
-			delete(config.AuthInfos, ctx.AuthInfo)
-			ctx.AuthInfo = o.UserName
+		if o.UserName != "" {
+			names.UserName = o.UserName
 		}
-		if o.ContextName != "" && o.ContextName != o.Context {
-			if e := validName(o.ContextName); e != nil {
-				return e
-			}
-			config.Contexts[o.ContextName] = ctx
-			delete(config.Contexts, o.Context)
-			config.CurrentContext = o.ContextName
+		if o.ContextName != "" {
+			names.ContextName = o.ContextName
+		}
+		if err := renameEntries(config, names, false); err != nil {
+			return err
 		}
 	}
+
 	if cmd.Flags().Changed("namespace") || o.Namespace != "" {
 		if o.Namespace != "" {
 			if e := validName(o.Namespace); e != nil {
@@ -253,7 +256,7 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	if w != nil && !cmd.Flags().Changed("move") && !cmd.Flags().Changed("copy") {
+	if w != nil && o.ImportReadability == "" && !cmd.Flags().Changed("move") && !cmd.Flags().Changed("copy") {
 		i, e := choose("Source file", []string{"Copy (keep source)", "Move (remove source after successful import)"})
 		if e != nil {
 			return e
@@ -261,6 +264,9 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 		o.Move = i == 1
 	}
 	if o.Move && len(names) != len(config.Contexts) {
+		if o.ImportReadability != "" {
+			return fmt.Errorf("moving would discard unselected contexts; use --import-copy or --all-contexts")
+		}
 		return fmt.Errorf("--move would discard unselected contexts; use --copy or --all-contexts")
 	}
 	if o.Move {
@@ -269,16 +275,30 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 			return e
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
+			if o.ImportReadability != "" {
+				return fmt.Errorf("cannot move a symlink source; use --import-copy")
+			}
 			return fmt.Errorf("--move does not accept symlink sources; use --copy")
 		}
 	}
 	// LoadFromFile records each object's origin. Resolve before relocating.
+	referenceDir := filepath.Dir(path)
+	if o.SourceBase != "" {
+		referenceDir = o.SourceBase
+		origin := filepath.Join(referenceDir, "clipboard.kubeconfig")
+		for _, cluster := range config.Clusters {
+			cluster.LocationOfOrigin = origin
+		}
+		for _, auth := range config.AuthInfos {
+			auth.LocationOfOrigin = origin
+		}
+	}
 	if err := clientcmd.ResolveLocalPaths(config); err != nil {
 		return err
 	}
 	for _, auth := range config.AuthInfos {
 		if auth.Exec != nil && strings.Contains(auth.Exec.Command, "/") && !filepath.IsAbs(auth.Exec.Command) {
-			auth.Exec.Command = filepath.Join(filepath.Dir(path), auth.Exec.Command)
+			auth.Exec.Command = filepath.Join(referenceDir, auth.Exec.Command)
 		}
 	}
 	if err := api.FlattenConfig(config); err != nil {
@@ -300,7 +320,11 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 	if o.Move {
 		verb = "Move"
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "%s %s → %s\nProfile: %s\n", verb, path, destination, o.Profile)
+	sourceLabel := path
+	if o.SourceLabel != "" {
+		sourceLabel = o.SourceLabel
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "%s %s → %s\nProfile: %s\n", verb, sourceLabel, destination, o.Profile)
 	for n, ctx := range config.Contexts {
 		fmt.Fprintf(cmd.OutOrStdout(), "  %s · cluster=%s · user=%s · namespace=%s\n", n, ctx.Cluster, ctx.AuthInfo, ctx.Namespace)
 	}
@@ -308,7 +332,11 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 		return nil
 	}
 	if w != nil {
-		v, e := w.input("Install? (yes/no)", "no")
+		label := "Install? (yes/no)"
+		if o.ImportReadability != "" {
+			label = "Import? (yes/no)"
+		}
+		v, e := w.input(label, "no")
 		if e != nil {
 			return e
 		}
@@ -347,6 +375,10 @@ func (s *Settings) install(cmd *cobra.Command, path string, o *installOptions) e
 			return fmt.Errorf("installed and archived but could not remove source: %w", e)
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), "Original archived:", backup)
+	}
+	if o.OnInstalled != nil {
+		ctx := config.Contexts[config.CurrentContext]
+		return o.OnInstalled(Context{Name: config.CurrentContext, File: destination, Server: config.Clusters[ctx.Cluster].Server, Namespace: ctx.Namespace})
 	}
 	fmt.Fprintln(cmd.OutOrStdout(), "Installed. Select it with kcm profile", o.Profile, "then kcm context.")
 	return nil
