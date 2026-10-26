@@ -148,6 +148,31 @@ are ignored. Kubeconfigs are recognized by their contents or conventional names
 (`config`, `kubeconfig`, `*.kubeconfig`, `kubeconfig.*`); malformed recognized
 configs still produce an error.
 
+### Select a profile and context directly
+
+```sh
+kcm dev --context api-dev
+kcm prod --context api-prod --file ~/.kube/prod/config  # disambiguate duplicate names
+kcm reset
+```
+
+`kcm PROFILE --context NAME` validates both names before changing this shell,
+clears previous-context history, and starts the selected context's configured
+timeout. An unknown profile, missing context, or ambiguous name returns an error
+and preserves the existing selection. Profile names that match built-in commands
+must use `kcm profile NAME` followed by `kcm context NAME` instead.
+Plain `kcm` still opens the current profile's context picker.
+
+`kcm reset` selects a local endpoint in the `local` profile: the only context,
+otherwise one from the file named `config`, otherwise the first context in stable
+name/path order. It clears previous-context history and applies the local
+profile's timeout (normally none). It works even if `auto_revert_local` is
+disabled. No eligible local context or invalid configuration returns an error
+without changing the shell. Waived remote endpoints are excluded.
+
+After upgrading, open a new shell or reload `eval "$(kcm init zsh)"` (or bash)
+to enable these commands in the current shell.
+
 ### Kubeconfigs maintained in repositories
 
 Symlink a repo-managed kubeconfig into the desired profile directory:
@@ -554,6 +579,8 @@ Namespace remains available through `kcm status`.
 | Command | Function |
 | --- | --- |
 | `kcm`, `kcm context [name\|-]` | Select a context; `-` returns to the previous one |
+| `kcm PROFILE --context NAME` | Select a validated profile and context together |
+| `kcm reset` | Return to the preferred local context |
 | `kcm profile [name]` | Pick a profile and context; with a name, set only the profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |
 | `kcm list` | List contexts grouped by profile, marking global and shell selections |

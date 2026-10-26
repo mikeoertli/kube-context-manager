@@ -34,6 +34,20 @@ files automatically. Files may contain multiple contexts. Identical context
 names in different files are disambiguated by source path in the switcher or
 `kcm context NAME --file PATH`.
 
+Profile shorthand (`kcm PROFILE --context NAME`) resolves the profile and exact
+context/file before emitting any exports. It resets selection history and starts
+the profile's configured timeout. Unknown profiles, missing/ambiguous contexts,
+and invalid configs leave the shell unchanged. Command names take precedence
+over profile names. Root argument/flag completion uses the named profile.
+
+`kcm reset` explicitly selects the same preferred local endpoint as expiry
+recovery, regardless of `auto_revert_local`. It requires an eligible context and
+preserves shell state on discovery failure or an empty local profile. Both paths
+skip waived remote endpoints. Explicit reset applies the local timeout settings.
+The shell integration records built-in command names and aliases at init so it
+can route profile shorthand through shell exports without evaluating ordinary
+command output, client output, or completion results.
+
 ## Timeout lifecycle
 
 1. A new interactive shell starts in local with no selection.

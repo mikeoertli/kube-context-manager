@@ -31,6 +31,14 @@ func shellInit(w io.Writer, shell, settings string) error {
 	fmt.Fprintln(w, "# kcm shell integration; source after other shell/keybinding plugins.")
 	emit(w, "KCM_SETTINGS", settings)
 	fmt.Fprintf(w, "_KCM_BIN=%s\n", quote(bin))
+	commands := " help __complete __completeNoDesc "
+	for _, cmd := range newCommand("", false).Commands() {
+		commands += cmd.Name() + " "
+		for _, alias := range cmd.Aliases {
+			commands += alias + " "
+		}
+	}
+	fmt.Fprintf(w, "_KCM_COMMANDS=%s\n", quote(commands))
 	s.emitPromptMetadata(w, "local")
 	fmt.Fprintln(w, commonShell)
 	if shell == "zsh" {

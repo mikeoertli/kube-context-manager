@@ -151,6 +151,7 @@ def main():
         if not args.only_picker:
             for executable, kind in targets:
                 check_local_return(executable, kind, binary, settings, base, root)
+                check_shortcuts(executable, kind, binary, settings, base, root)
                 check_rename(executable, kind, binary, settings, base, root)
         if not args.bash and not args.only_picker:
             print("SKIP bash PTY tests: supply --bash /path/to/bash (4.4+)")
@@ -362,6 +363,39 @@ def check_local_return(executable, kind, binary, settings, base, root):
         a.close()
         b.close()
         settings.write_text(original_settings)
+
+
+def check_shortcuts(executable, kind, binary, settings, base, root):
+    a = Shell(executable, kind, binary, settings)
+    b = Shell(executable, kind, binary, settings)
+    source = root / "prod" / "config"
+    before = source.read_bytes()
+    state = base / (kind + "-shortcuts")
+    snapshot = "printf '%s|%s|%s|%s' \"$KCM_PROFILE\" \"$KCM_CONTEXT\" \"$KUBECONFIG\" \"${KCM_EXPIRES_AT:-}\" > " + shlex.quote(str(state))
+    try:
+        a.command("kcm --settings " + shlex.quote(str(settings)) + " prod --context=remote")
+        a.command(snapshot)
+        selected = state.read_text()
+        assert selected.startswith("prod|remote|" + str(source) + "|")
+        assert selected.rsplit("|", 1)[1].isdigit(), "Shorthand did not start timeout"
+        b.command("kcm prod --context second")
+        for command, message in [("kcm missing --context remote", "unknown profile"), ("kcm prod --context missing", "not found"), ("kcm prod", "specify --context")]:
+            output = a.command(command)
+            assert message in output, output
+            a.command(snapshot)
+            assert state.read_text() == selected, "Invalid shorthand changed selection"
+        output = a.command("kcm __complete prod --context re")
+        assert "remote" in output and "command not found" not in output, output
+        a.command("kcm reset")
+        a.command(snapshot)
+        assert state.read_text() == "local|local-lab|" + str(root / "config") + "|"
+        b.command(snapshot)
+        assert state.read_text().startswith("prod|second|"), "Reset changed another shell"
+        assert source.read_bytes() == before, "Shorthand rewrote current-context"
+        print("PASS", kind, "profile/context shorthand, validation, timeout, completions, reset, shell isolation")
+    finally:
+        a.close()
+        b.close()
 
 
 def check_isolation(executable, kind, binary, settings, base, root):

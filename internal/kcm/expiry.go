@@ -10,23 +10,10 @@ import (
 func (s *Settings) expireToLocal(out io.Writer) error {
 	var selected *Context
 	if s.AutoRevertLocal {
-		contexts, err := s.contexts("local")
+		var err error
+		selected, err = s.defaultLocalContext()
 		if err != nil {
 			return err
-		}
-		// Discovery sorts by context name, then source path. Waivers can allow
-		// remote entries in the root, but those are not automatic local targets.
-		for i := range contexts {
-			c := &contexts[i]
-			if !s.local(c.Server) {
-				continue
-			}
-			if selected == nil || filepath.Base(c.File) == "config" {
-				selected = c
-			}
-			if filepath.Base(c.File) == "config" {
-				break
-			}
 		}
 	}
 	reset(out, "local")
@@ -38,4 +25,27 @@ func (s *Settings) expireToLocal(out io.Writer) error {
 	}
 	s.emitPromptMetadata(out, "local")
 	return nil
+}
+
+func (s *Settings) defaultLocalContext() (*Context, error) {
+	contexts, err := s.contexts("local")
+	if err != nil {
+		return nil, err
+	}
+	var selected *Context
+	// Stable discovery order: context name, then source path. Waived remote
+	// endpoints must never be selected by reset or automatic expiry recovery.
+	for i := range contexts {
+		c := &contexts[i]
+		if !s.local(c.Server) {
+			continue
+		}
+		if selected == nil {
+			selected = c
+		}
+		if filepath.Base(c.File) == "config" {
+			return c, nil
+		}
+	}
+	return selected, nil
 }

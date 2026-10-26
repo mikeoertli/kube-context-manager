@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0 — Work in progress
+
+- Add `kcm <profile> --context <name>` for validated profile and context selection.
+- Add `kcm reset` to select the default local context and clear previous selection history.
+
 ## 0.8.0 — 2026-10-21
 
 - Shorten the README demo to the basic selection, namespace, and expiry workflow.

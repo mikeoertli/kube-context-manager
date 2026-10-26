@@ -52,7 +52,86 @@ func newCommand(version string, shell bool) *cobra.Command {
 		return s.switchContext(cmd.OutOrStdout(), name, file, time.Now())
 	}
 	contextCmd.ValidArgsFunction = contextCompletion(load)
-	root.RunE = contextCmd.RunE
+	var profileContext, profileFile string
+	root.Use = "kcm [profile]"
+	root.Args = cobra.MaximumNArgs(1)
+	root.Example = "  kcm\n  kcm dev --context api-dev\n  kcm prod --context api-prod --file ~/.kube/prod/config\n  kcm reset"
+	root.Flags().StringVar(&profileContext, "context", "", "Select this context in the named profile")
+	root.Flags().StringVar(&profileFile, "file", "", "Disambiguate the profile's context by kubeconfig path")
+	root.ValidArgsFunction = profileCompletion(load)
+	root.RunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			if cmd.Flags().Changed("context") || cmd.Flags().Changed("file") {
+				return fmt.Errorf("specify a profile: kcm <profile> --context <context>")
+			}
+			return contextCmd.RunE(cmd, args)
+		}
+		if err := needShell(); err != nil {
+			return err
+		}
+		s, err := load()
+		if err != nil {
+			return err
+		}
+		if _, err := s.dir(args[0]); err != nil {
+			return err
+		}
+		if profileContext == "" {
+			return fmt.Errorf("specify --context for profile %q", args[0])
+		}
+		if profileFile != "" {
+			profileFile, err = expandPath(profileFile)
+			if err != nil {
+				return err
+			}
+		}
+		cs, err := s.contexts(args[0])
+		if err != nil {
+			return err
+		}
+		c, err := selectContext(cs, profileContext, profileFile)
+		if err != nil {
+			return err
+		}
+		return s.activateContext(cmd.OutOrStdout(), args[0], c, time.Now(), true)
+	}
+	root.RegisterFlagCompletionFunc("context", func(cmd *cobra.Command, args []string, prefix string) ([]string, cobra.ShellCompDirective) {
+		if len(args) != 1 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		s, err := load()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		cs, err := s.contexts(args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+		var names []string
+		for _, c := range cs {
+			if strings.HasPrefix(c.Name, prefix) {
+				names = append(names, c.Name)
+			}
+		}
+		return names, cobra.ShellCompDirectiveNoFileComp
+	})
+	root.AddCommand(&cobra.Command{Use: "reset", Short: "Return this shell to its default local context", Long: "Select a local endpoint in the local profile: the only context, otherwise prefer the file named config, then the first context by name and file path. Clear previous-context history and apply the local profile's timeout. Ignore auto_revert_local, which controls expiry only. An empty local profile, invalid config, or missing local endpoint returns an error without changing the shell. Source kubeconfigs are not modified.", Example: "  kcm reset", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		if err := needShell(); err != nil {
+			return err
+		}
+		s, err := load()
+		if err != nil {
+			return err
+		}
+		c, err := s.defaultLocalContext()
+		if err != nil {
+			return err
+		}
+		if c == nil {
+			return fmt.Errorf("no local context available in profile %q; shell selection unchanged", "local")
+		}
+		return s.activateContext(cmd.OutOrStdout(), "local", *c, time.Now(), true)
+	}})
 	root.AddCommand(contextCmd)
 	profile := &cobra.Command{Use: "profile [name]", Short: "Change profile; omit name to pick a profile and context", Long: "Without a name, select a profile with fzf, then select a context in that profile. Both selections apply together; cancellation, an empty profile, or an error leaves the shell unchanged. A named profile changes only the profile and clears its context and timeout; select a context afterwards. Switching profiles clears previous-context history. New shells start local.", Args: cobra.MaximumNArgs(1), Example: "  kcm profile\n  kcm profile prod\n  kcm context customer-a", ValidArgsFunction: profileCompletion(load), RunE: func(cmd *cobra.Command, args []string) error {
 		if e := needShell(); e != nil {
