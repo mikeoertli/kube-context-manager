@@ -151,7 +151,7 @@ def main():
         if not args.only_picker:
             for executable, kind in targets:
                 check_local_return(executable, kind, binary, settings, base, root)
-                check_shortcuts(executable, kind, binary, settings, base, root)
+                check_shortcuts(executable, kind, binary, settings, base, root, args.fzf)
                 check_rename(executable, kind, binary, settings, base, root)
         if not args.bash and not args.only_picker:
             print("SKIP bash PTY tests: supply --bash /path/to/bash (4.4+)")
@@ -365,7 +365,7 @@ def check_local_return(executable, kind, binary, settings, base, root):
         settings.write_text(original_settings)
 
 
-def check_shortcuts(executable, kind, binary, settings, base, root):
+def check_shortcuts(executable, kind, binary, settings, base, root, fzf):
     a = Shell(executable, kind, binary, settings)
     b = Shell(executable, kind, binary, settings)
     source = root / "prod" / "config"
@@ -379,6 +379,13 @@ def check_shortcuts(executable, kind, binary, settings, base, root):
         assert selected.startswith("prod|remote|" + str(source) + "|")
         assert selected.rsplit("|", 1)[1].isdigit(), "Shorthand did not start timeout"
         b.command("kcm prod --context second")
+        a.command("kcm prod --context second")
+        for command, expected in [("kcm -", "remote"), ("kcm -", "second"), ("kcm context -", "remote")]:
+            a.command(command)
+            a.command(snapshot)
+            assert state.read_text().startswith("prod|" + expected + "|"), "Previous-context toggle failed"
+        a.command(snapshot)
+        selected = state.read_text()
         for command, message in [("kcm missing --context remote", "unknown profile"), ("kcm prod --context missing", "not found"), ("kcm prod", "specify --context")]:
             output = a.command(command)
             assert message in output, output
@@ -389,10 +396,47 @@ def check_shortcuts(executable, kind, binary, settings, base, root):
         a.command("kcm reset")
         a.command(snapshot)
         assert state.read_text() == "local|local-lab|" + str(root / "config") + "|"
+        output = a.command("kcm -")
+        assert "no previous context" in output, output
+        a.command("kcm prod --context remote")
+        a.command("kcm local --context local-lab")
+        a.command("kcm -")
+        a.command(snapshot)
+        assert state.read_text().startswith("prod|remote|"), "Cross-profile toggle failed"
+        a.command("kcm -")
+        a.command(snapshot)
+        assert state.read_text() == "local|local-lab|" + str(root / "config") + "|"
         b.command(snapshot)
         assert state.read_text().startswith("prod|second|"), "Reset changed another shell"
+        a.command("kcm prod --context second")
+        a.command("kcm local --context local-lab")
+        listing = base / (kind + "-history-list")
+        a.command("kcm history --list > " + shlex.quote(str(listing)))
+        text = listing.read_text()
+        assert "second" in text and "remote" in text and text.index("second") < text.index("remote"), text
+        assert "export " not in text, "List contained shell exports"
+        a.command("kcm history 2")
+        a.command(snapshot)
+        assert state.read_text().startswith("prod|remote|"), "History number chose wrong entry"
+        if fzf:
+            a.command("export PATH=" + shlex.quote(str(pathlib.Path(fzf).resolve().parent)) + ":$PATH")
+            a.send("kcm history")
+            assert b"Recent selections" in a.drain(0.5)
+            a.send("second", enter=b"")
+            a.drain(0.3)
+            a.send("")
+            a.prompt()
+            a.command(snapshot)
+            assert state.read_text().startswith("prod|second|"), "History picker chose wrong selection"
+            a.send("kcm history")
+            a.drain(0.4)
+            a.send("\x03", enter=b"")
+            output = a.prompt()
+            assert "selection cancelled" in output, output
+            a.command(snapshot)
+            assert state.read_text().startswith("prod|second|"), "Cancelled history picker changed selection"
         assert source.read_bytes() == before, "Shorthand rewrote current-context"
-        print("PASS", kind, "profile/context shorthand, validation, timeout, completions, reset, shell isolation")
+        print("PASS", kind, "profile shorthand, toggle, history list/number/picker, validation, timeout, completions, reset, isolation")
     finally:
         a.close()
         b.close()

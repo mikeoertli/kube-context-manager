@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.9.0 — Work in progress
+## 0.10.0 — 2026-10-26
+
+- Add `kcm history` with a searchable picker, `--list`, and numbered selection
+  for the last 20 distinct shell-local profile/context/file selections.
+- Validate history entries before selection, refresh renamed entries, and clear
+  history on reset, clear, new shells, and timeout expiry.
+- Add `kcm -` to toggle the previous context and profile, preserving exact file identity.
+
+## 0.9.0 — 2026-10-26
 
 - Add `kcm <profile> --context <name>` for validated profile and context selection.
 - Add `kcm reset` to select the default local context and clear previous selection history.

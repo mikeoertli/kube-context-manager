@@ -33,6 +33,8 @@ func fixture(t *testing.T) *Settings {
 	t.Setenv("KCM_EXPIRES_AT", "")
 	t.Setenv("KCM_PREVIOUS_CONTEXT", "")
 	t.Setenv("KCM_PREVIOUS_FILE", "")
+	t.Setenv("KCM_PREVIOUS_PROFILE", "")
+	t.Setenv("KCM_HISTORY", "")
 	return s
 }
 

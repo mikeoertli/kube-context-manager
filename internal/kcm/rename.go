@@ -275,6 +275,7 @@ func (s *Settings) renameConfig(cmd *cobra.Command, out io.Writer, path string, 
 				emit(cmd.OutOrStdout(), selection[0], o.ContextName)
 			}
 		}
+		renameHistory(cmd.OutOrStdout(), oldContext, o.ContextName, target)
 	}
 	fmt.Fprintf(out, "Updated kubeconfig: %s\nOriginal backup: %s\nCompare: diff -u -- %s %s\nRestore: cp -- %s %s\n", path, backup, quote(backup), quote(target), quote(backup), quote(target))
 	if !shell && os.Getenv("KCM_CONTEXT") == oldContext && os.Getenv("KCM_FILE") != "" && canonical(os.Getenv("KCM_FILE")) == target && oldContext != o.ContextName {

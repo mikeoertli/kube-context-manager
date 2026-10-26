@@ -35,7 +35,7 @@ names in different files are disambiguated by source path in the switcher or
 `kcm context NAME --file PATH`.
 
 Profile shorthand (`kcm PROFILE --context NAME`) resolves the profile and exact
-context/file before emitting any exports. It resets selection history and starts
+context/file before emitting any exports. It remembers the previous profile/context/file and starts
 the profile's configured timeout. Unknown profiles, missing/ambiguous contexts,
 and invalid configs leave the shell unchanged. Command names take precedence
 over profile names. Root argument/flag completion uses the named profile.
@@ -115,7 +115,7 @@ and executable references are made absolute, not copied or removed.
 
 Successful `kcm import` operations emit shell selection only after installation
 finishes, using the installed context name and exact destination path. Selection
-resets previous-context history and starts the destination profile's timeout.
+remembers the previous profile/context/file and starts the destination profile's timeout.
 `--import-only`, dry runs, failures, and cancellation leave selection unchanged.
 The shell integration keeps import messages on stderr and evaluates only generated
 exports from stdout. Direct binary calls require `--import-only` or `--dry-run`.
@@ -214,3 +214,23 @@ configs fail listing with an error identifying the profile.
 
 The global-config loader does not perform legacy file migration, authenticate,
 or execute credential helpers. All markers remain plain text for redirected output.
+
+## Previous selection
+
+`kcm -` and `kcm context -` resolve the saved profile, context name, and exact
+source path against current discovery before emitting any changes. Selection
+stores the last distinct context; a profile-only change preserves it until the
+next context is chosen. Re-selecting the active context does not overwrite it.
+Swapping updates history to the outgoing selection, enabling repeated toggles.
+Reset, clear, startup, and expiry remove history and the previous-selection variables. Failures
+leave both selection and history untouched. Existing context-selection timeout
+rules apply, with a new deadline when crossing profiles.
+
+`KCM_HISTORY` holds at most 20 deduplicated previous selections as JSON in the
+shell environment, excluding the active selection. `kcm history` uses an ordered
+fzf picker; `--list` is read-only stdout and supports direct binary invocation.
+A positive row number bypasses the picker. Selection rediscovers and validates
+the target without cached kubeconfig content or cluster calls. Missing targets
+and cancellation emit no exports. Successful rename updates matching history
+entries in the integrated shell. The previous-selection variables mirror the
+first entry, so `kcm -` remains a two-way toggle within the same history.

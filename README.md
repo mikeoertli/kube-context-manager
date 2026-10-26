@@ -115,7 +115,7 @@ Every new shell starts in `local`, including a new interactive child shell.
 `kcm profile` opens the profile picker followed by that profile's context picker.
 Both selections apply together. Cancelling either picker, selecting an empty
 profile, or encountering an error leaves the shell unchanged. The new selection
-starts the profile's configured timeout and clears previous-context history.
+starts the profile's configured timeout and remembers the previous selection.
 
 `kcm profile NAME` clears the context and timeout without opening a picker.
 **Choose a context before using a client.** Plain `kcm` continues to select a
@@ -157,7 +157,7 @@ kcm reset
 ```
 
 `kcm PROFILE --context NAME` validates both names before changing this shell,
-clears previous-context history, and starts the selected context's configured
+remembers the previous profile and context, and starts the selected context's configured
 timeout. An unknown profile, missing context, or ambiguous name returns an error
 and preserves the existing selection. Profile names that match built-in commands
 must use `kcm profile NAME` followed by `kcm context NAME` instead.
@@ -172,6 +172,43 @@ without changing the shell. Waived remote endpoints are excluded.
 
 After upgrading, open a new shell or reload `eval "$(kcm init zsh)"` (or bash)
 to enable these commands in the current shell.
+
+### Toggle the previous context
+
+```sh
+kcm dev --context api-dev
+kcm qa --context api-qa
+kcm -                         # back to dev / api-dev
+kcm -                         # back to qa / api-qa
+```
+
+Like `cd -`, each invocation swaps the current and previous selection, including
+its profile and exact kubeconfig path. `kcm context -` does the same thing.
+Re-selecting the current context preserves the previous one. Contexts must still
+exist in their profile: missing history, removed configs, and invalid targets
+return an error without changing the shell. Normal selection timeout rules apply;
+returning to a different profile starts its configured timeout.
+
+### Browse recent selections
+
+```sh
+kcm history                   # searchable history picker, newest first
+kcm history --list            # numbered list without switching
+kcm history 2                 # select the second entry
+```
+
+History remembers the last **20 distinct previous selections**, identified by
+profile, context, and kubeconfig path. The current selection is excluded.
+Selecting a history entry validates that it still exists in the configured
+profile, then makes it current and moves the outgoing selection to the front.
+`kcm -` uses the most recent entry. Renaming a context also updates matching
+history entries in that shell.
+
+History belongs to this shell and is stored in environment variables, without
+a history file or credentials. New shells, `kcm reset`, `kcm clear`, and timeout
+expiry clear it, so history cannot jump straight back to an expired selection.
+Removed or invalid entries remain visible until they age out or history is
+cleared; selecting one returns an error and preserves the current selection.
 
 ### Kubeconfigs maintained in repositories
 
@@ -578,9 +615,10 @@ Namespace remains available through `kcm status`.
 
 | Command | Function |
 | --- | --- |
-| `kcm`, `kcm context [name\|-]` | Select a context; `-` returns to the previous one |
+| `kcm`, `kcm context [name\|-]` | Select a context; `kcm -` toggles the previous profile/context |
 | `kcm PROFILE --context NAME` | Select a validated profile and context together |
 | `kcm reset` | Return to the preferred local context |
+| `kcm history [NUMBER] [--list]` | Pick, list, or select recent shell-local profile/context selections |
 | `kcm profile [name]` | Pick a profile and context; with a name, set only the profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |
 | `kcm list` | List contexts grouped by profile, marking global and shell selections |

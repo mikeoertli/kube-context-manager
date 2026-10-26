@@ -1,6 +1,6 @@
 # A fresh shell always starts local, even when its parent is in production.
 export KCM_PROFILE=local KUBECONFIG=/dev/null
-unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE
+unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE KCM_PREVIOUS_PROFILE KCM_HISTORY
 if [ -n "${ZSH_VERSION:-}" ]; then zmodload zsh/datetime; fi
 
 # Starship's env_var modules need no subprocesses. Keep only the active slot
@@ -63,7 +63,7 @@ kcm() {
         esac
     done
     case "$_kcm_cmd" in
-        profile|context|clear|renew|rename|make-readable|import|reset) _kcm_mutate=1 ;;
+        profile|context|clear|renew|rename|make-readable|import|reset|history) _kcm_mutate=1 ;;
         *)
             # Unknown command names are profile shorthand. Keep ordinary command
             # output (including can-i and exec --context) out of eval.
@@ -72,6 +72,14 @@ kcm() {
                 *) _kcm_mutate=1 ;;
             esac ;;
     esac
+    if [ "$_kcm_cmd" = history ]; then
+        for _kcm_arg in "$@"; do
+            case "$_kcm_arg" in
+                --list|--list=true) _kcm_mutate=0 ;;
+                --list=false) _kcm_mutate=1 ;;
+            esac
+        done
+    fi
     for _kcm_arg in "$@"; do
         case "$_kcm_arg" in -h|--help) _kcm_mutate=0 ;; esac
     done
@@ -118,7 +126,7 @@ _kcm_expire() {
     fi
     if [ "$_kcm_now" -lt "$KCM_EXPIRES_AT" ]; then return 0; fi
     export KCM_PROFILE=local KUBECONFIG=/dev/null
-    unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE
+    unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE KCM_PREVIOUS_PROFILE KCM_HISTORY
     _KCM_PROFILE_EMOJI=${_KCM_LOCAL_EMOJI:-🏠}
     # Start from an unselected local state even if settings or discovery fail.
     # Only an actual expiry invokes Go; normal prompt rendering stays shell-only.

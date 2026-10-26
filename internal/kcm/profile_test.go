@@ -85,7 +85,7 @@ exit 2
 				if expires < before || expires > time.Now().Add(8*time.Hour).Unix() {
 					t.Fatalf("new profile inherited the old deadline: %s", out)
 				}
-				if strings.Contains(out, "old-context") || strings.Count(string(log), "--header=") != 2 {
+				if !strings.Contains(out, "export KCM_PREVIOUS_CONTEXT='local-context'") || strings.Count(string(log), "--header=") != 2 {
 					t.Fatalf("incorrect history or picker sequence: %s\n%s", out, log)
 				}
 			case "named":

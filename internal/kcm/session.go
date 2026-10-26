@@ -25,7 +25,11 @@ func emit(w io.Writer, key, val string) { fmt.Fprintf(w, "export %s=%s\n", key, 
 func reset(w io.Writer, profile string) {
 	emit(w, "KCM_PROFILE", profile)
 	emit(w, "KUBECONFIG", "/dev/null")
-	fmt.Fprintln(w, "unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE")
+	fmt.Fprintln(w, "unset KCM_CONTEXT KCM_FILE KCM_EXPIRES_AT KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE KCM_PREVIOUS_PROFILE KCM_HISTORY")
+}
+
+func clearPrevious(w io.Writer) {
+	fmt.Fprintln(w, "unset KCM_PREVIOUS_CONTEXT KCM_PREVIOUS_FILE KCM_PREVIOUS_PROFILE KCM_HISTORY")
 }
 
 func choose(header string, rows []string) (int, error) {
@@ -95,27 +99,31 @@ func chooseContext(profile string, cs []Context) (Context, error) {
 }
 
 func (s *Settings) switchContext(w io.Writer, name, file string, now time.Time) error {
-	cs, err := s.contexts(currentProfile())
+	profile := currentProfile()
+	if name == "-" {
+		name = os.Getenv("KCM_PREVIOUS_CONTEXT")
+		file = os.Getenv("KCM_PREVIOUS_FILE")
+		if name == "" || file == "" {
+			return fmt.Errorf("no previous context")
+		}
+		if previousProfile := os.Getenv("KCM_PREVIOUS_PROFILE"); previousProfile != "" {
+			profile = previousProfile
+		}
+	}
+	cs, err := s.contexts(profile)
 	if err != nil {
 		return err
 	}
 	var c Context
-	if name == "-" {
-		name = os.Getenv("KCM_PREVIOUS_CONTEXT")
-		file = os.Getenv("KCM_PREVIOUS_FILE")
-		if name == "" {
-			return fmt.Errorf("no previous context")
-		}
-	}
 	if name == "" {
-		c, err = chooseContext(currentProfile(), cs)
+		c, err = chooseContext(profile, cs)
 	} else {
 		c, err = selectContext(cs, name, file)
 	}
 	if err != nil {
 		return err
 	}
-	return s.activateContext(w, currentProfile(), c, now, false)
+	return s.activateContext(w, profile, c, now, profile != currentProfile())
 }
 
 func (s *Settings) pickProfileContext(w io.Writer, profile string) error {
@@ -149,10 +157,8 @@ func (s *Settings) activateContext(w io.Writer, profile string, c Context, now t
 	emit(w, "KCM_SETTINGS", s.Path)
 	if resetProfile {
 		reset(w, profile)
-	} else {
-		emit(w, "KCM_PREVIOUS_CONTEXT", os.Getenv("KCM_CONTEXT"))
-		emit(w, "KCM_PREVIOUS_FILE", os.Getenv("KCM_FILE"))
 	}
+	savePrevious(w, profile, c.Name, c.File)
 	emit(w, "KCM_CONTEXT", c.Name)
 	emit(w, "KCM_FILE", c.File)
 	emit(w, "KUBECONFIG", c.File)
