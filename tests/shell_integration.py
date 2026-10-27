@@ -152,6 +152,7 @@ def main():
             for executable, kind in targets:
                 check_local_return(executable, kind, binary, settings, base, root)
                 check_shortcuts(executable, kind, binary, settings, base, root, args.fzf)
+                check_transfer(executable, kind, binary, settings, base, root)
                 check_rename(executable, kind, binary, settings, base, root)
         if not args.bash and not args.only_picker:
             print("SKIP bash PTY tests: supply --bash /path/to/bash (4.4+)")
@@ -437,6 +438,67 @@ def check_shortcuts(executable, kind, binary, settings, base, root, fzf):
             assert state.read_text().startswith("prod|second|"), "Cancelled history picker changed selection"
         assert source.read_bytes() == before, "Shorthand rewrote current-context"
         print("PASS", kind, "profile shorthand, toggle, history list/number/picker, validation, timeout, completions, reset, isolation")
+    finally:
+        a.close()
+        b.close()
+
+
+def check_transfer(executable, kind, binary, settings, base, root):
+    clipboard = base / (kind + "-transfer-clipboard")
+    clipboard.write_text("")
+    clipboard_bin = base / (kind + "-transfer-bin")
+    clipboard_bin.mkdir()
+    for name in ["pbpaste", "pbcopy", "wl-paste", "wl-copy", "xclip", "xsel"]:
+        if name in ["pbcopy", "wl-copy"]:
+            body = '#!/bin/sh\n/bin/cat > "$KCM_TEST_CLIPBOARD"\n'
+        elif name in ["xclip", "xsel"]:
+            body = '#!/bin/sh\ncase " $* " in *" -in "*|*" --input "*) /bin/cat > "$KCM_TEST_CLIPBOARD" ;; *) /bin/cat "$KCM_TEST_CLIPBOARD" ;; esac\n'
+        else:
+            body = '#!/bin/sh\n/bin/cat "$KCM_TEST_CLIPBOARD"\n'
+        reader = clipboard_bin / name
+        reader.write_text(body)
+        reader.chmod(0o700)
+    a = Shell(executable, kind, binary, settings)
+    b = Shell(executable, kind, binary, settings)
+    state = base / (kind + "-transfer-state")
+    snapshot = "printf '%s|%s|%s|%s|%s|%s' \"$KCM_SETTINGS\" \"$KCM_PROFILE\" \"$KCM_CONTEXT\" \"$KCM_FILE\" \"$KUBECONFIG\" \"${KCM_EXPIRES_AT:-}\" > " + shlex.quote(str(state))
+    source = root / "prod" / "config"
+    before = source.read_bytes()
+    try:
+        for shell in [a, b]:
+            shell.command("export PATH=" + shlex.quote(str(clipboard_bin)) + ":$PATH KCM_TEST_CLIPBOARD=" + shlex.quote(str(clipboard)))
+        a.command("kcm prod --context remote; kcm renew --for 24h")
+        a.command(snapshot)
+        expected = state.read_text()
+        output = a.command("kcm cp")
+        assert "Copied profile prod" in output, output
+        copied = clipboard.read_text()
+        assert copied.startswith("kcm paste --selection kcm1.") and "\n" not in copied
+        b.command("kcm local --context local-lab")
+        output = b.command("kcm paste")
+        assert "from the copied selection" in output, output
+        b.command(snapshot)
+        assert state.read_text() == expected, "Paste changed source timeout/settings/file"
+        assert clipboard.read_text() == copied, "Paste modified clipboard"
+        b.command("kcm prod --context second")
+        # These are the same bytes a literal terminal paste inserts before Enter.
+        b.send(copied)
+        output = b.prompt()
+        assert "from the copied selection" in output, output
+        b.command(snapshot)
+        assert state.read_text() == expected, "Literal paste did not restore source state"
+        marker = base / "corrupted-paste-ran"
+        for corrupt in ["", "unrelated clipboard", copied[:-1] + "x", copied + "; touch " + shlex.quote(str(marker))]:
+            clipboard.write_text(corrupt)
+            output = b.command("kcm paste")
+            assert "clipboard does not contain a kcm profile + context" in output, output
+            b.command(snapshot)
+            assert state.read_text() == expected, "Invalid clipboard changed destination"
+        assert not marker.exists(), "Paste executed clipboard content"
+        a.command(snapshot)
+        assert state.read_text() == expected, "Transfer modified source shell"
+        assert source.read_bytes() == before, "Transfer modified shared kubeconfig"
+        print("PASS", kind, "clipboard copy/paste, literal paste, exact deadline/settings/file, corruption, source isolation")
     finally:
         a.close()
         b.close()

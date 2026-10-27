@@ -104,7 +104,7 @@ func TestResetLocalSelection(t *testing.T) {
 
 func applySelection(t *testing.T, code string) {
 	t.Helper()
-	keys := []string{"KCM_PROFILE", "KCM_CONTEXT", "KCM_FILE", "KUBECONFIG", "KCM_EXPIRES_AT", "KCM_PREVIOUS_PROFILE", "KCM_PREVIOUS_CONTEXT", "KCM_PREVIOUS_FILE", "KCM_HISTORY"}
+	keys := []string{"KCM_PROFILE", "KCM_CONTEXT", "KCM_FILE", "KUBECONFIG", "KCM_EXPIRES_AT", "KCM_PREVIOUS_PROFILE", "KCM_PREVIOUS_CONTEXT", "KCM_PREVIOUS_FILE", "KCM_HISTORY", "KCM_SETTINGS"}
 	script := code + "\nprintf '%s\\0'"
 	for _, key := range keys {
 		script += " \"${" + key + ":-}\""

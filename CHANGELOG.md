@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 — Work in progress
+
+- Add `kcm copy` (`kcm cp`) and `kcm paste` to transfer a shell selection via
+  the clipboard, including a command usable with literal terminal paste.
+- Preserve the source profile, exact kubeconfig/context, settings path, and
+  existing timeout deadline without transferring credentials or kubeconfig data.
+- Detect corrupted or unrelated clipboard content and reject expired, missing,
+  or changed targets without changing the destination shell.
+
 ## 0.10.0 — 2026-10-26
 
 - Add `kcm history` with a searchable picker, `--list`, and numbered selection

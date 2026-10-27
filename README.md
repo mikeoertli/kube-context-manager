@@ -210,6 +210,42 @@ expiry clear it, so history cannot jump straight back to an expired selection.
 Removed or invalid entries remain visible until they age out or history is
 cleared; selecting one returns an error and preserves the current selection.
 
+### Copy a selection to another terminal
+
+```sh
+# Source terminal:
+kcm prod --context api-prod
+kcm copy                      # alias: kcm cp
+
+# Destination terminal:
+kcm paste
+# Or use Edit > Paste / Cmd+V, then press Enter.
+```
+
+Copy puts a generated `kcm paste` command on the clipboard. It carries the
+profile, context, exact kubeconfig path, settings path, and existing timeout
+**deadline**. Pasting preserves the remaining time; it does not start a fresh
+production session. An untimed source stays untimed. Both shells must have KCM
+shell integration and access to the same paths. Open a new shell or reload
+`eval "$(kcm init zsh)"` (or bash) after upgrading.
+
+`kcm paste` validates the clipboard format and integrity check, then confirms
+that the target still exists and its server is unchanged. Corrupted or unrelated
+content reports **“clipboard does not contain a kcm profile + context”**.
+Expired selections, unavailable targets, or changed servers also return errors
+without changing the destination shell. Paste leaves the clipboard unchanged.
+
+The clipboard contains selection metadata, without kubeconfig contents,
+credentials, or source history. Namespace comes from the shared kubeconfig;
+paste does not edit it. The destination retains its own history. Clipboard
+support uses `pbcopy`/`pbpaste` on macOS, or `wl-copy`/`wl-paste`, `xclip`, or
+`xsel` on Linux.
+
+`kcm paste` treats clipboard content as data and never executes it. Literal
+Cmd+V works because copy generates a command with an encoded token. If another
+app replaces the clipboard entirely, Cmd+V follows normal terminal behavior;
+use `kcm paste` when you want KCM to validate arbitrary clipboard contents.
+
 ### Kubeconfigs maintained in repositories
 
 Symlink a repo-managed kubeconfig into the desired profile directory:
@@ -618,6 +654,7 @@ Namespace remains available through `kcm status`.
 | `kcm`, `kcm context [name\|-]` | Select a context; `kcm -` toggles the previous profile/context |
 | `kcm PROFILE --context NAME` | Select a validated profile and context together |
 | `kcm reset` | Return to the preferred local context |
+| `kcm copy` / `kcm cp`, `kcm paste` | Transfer a profile/context to another terminal via the clipboard |
 | `kcm history [NUMBER] [--list]` | Pick, list, or select recent shell-local profile/context selections |
 | `kcm profile [name]` | Pick a profile and context; with a name, set only the profile |
 | `kcm namespace [name] [--create]` | Pick a shared namespace, or create and switch |

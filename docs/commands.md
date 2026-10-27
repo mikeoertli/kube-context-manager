@@ -24,6 +24,7 @@ Available Commands:
   completion         Print shell completions, including profile/context names
   context            Select a context in this profile; omit name for fzf
   contexts           List available contexts, servers, namespaces, and source files
+  copy               Copy this shell's profile and context for another terminal
   doctor             Validate settings, profile configs, root waivers, and fzf
   exec               Run a supported client with the shell-selected context
   help               Help about any command
@@ -33,6 +34,7 @@ Available Commands:
   install            Import a kubeconfig, with optional readable names and copy/move
   list               List discovered contexts grouped by profile, with current selections marked
   namespace          Choose a shared namespace, or create one and switch to it
+  paste              Apply a copied KCM profile and context to this shell
   permissions        Inspect live permissions in one namespace; never cached
   print-context-name Print this shell's selected context name
   print-kubeconfig   Print this shell's selected kubeconfig file path
@@ -238,6 +240,49 @@ Examples:
 Flags:
   -h, --help   help for history
       --list   Print recent selections without switching
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm copy`
+
+```text
+Copy a pasteable KCM command to the clipboard. Includes the selected profile, exact context/file, settings path, and existing timeout deadline. Does not copy kubeconfig contents, credentials, or history. The receiving shell must have access to the same paths. In another initialized shell, run kcm paste, or use Edit > Paste / Cmd+V and press Enter. Expired selections cannot be copied.
+
+Usage:
+  kcm copy [flags]
+
+Aliases:
+  copy, cp
+
+Examples:
+  kcm copy
+  kcm cp
+  # In the other terminal:
+  kcm paste
+
+Flags:
+  -h, --help   help for copy
+
+Global Flags:
+      --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")
+```
+
+## `kcm paste`
+
+```text
+Validate and apply the profile/context copied by kcm copy. Reads the clipboard unless invoked by the generated pasteable command. Restores the source settings path, exact kubeconfig/context, and existing timeout deadline without extending it. Destination history remains shell-local. Damaged/unrelated clipboard contents, expired selections, missing configs, and changed server endpoints return an error without changing this shell. Clipboard content is parsed as data and never evaluated.
+
+Usage:
+  kcm paste [flags]
+
+Examples:
+  kcm paste
+  # Or paste the command produced by kcm copy with Cmd+V, then press Enter.
+
+Flags:
+  -h, --help   help for paste
 
 Global Flags:
       --settings string   Settings file (also KCM_SETTINGS) (default "~/.config/kcm/kcm_config.toml")

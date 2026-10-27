@@ -63,7 +63,7 @@ kcm() {
         esac
     done
     case "$_kcm_cmd" in
-        profile|context|clear|renew|rename|make-readable|import|reset|history) _kcm_mutate=1 ;;
+        profile|context|clear|renew|rename|make-readable|import|reset|history|paste) _kcm_mutate=1 ;;
         *)
             # Unknown command names are profile shorthand. Keep ordinary command
             # output (including can-i and exec --context) out of eval.

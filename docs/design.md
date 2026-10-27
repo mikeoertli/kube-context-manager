@@ -234,3 +234,19 @@ the target without cached kubeconfig content or cluster calls. Missing targets
 and cancellation emit no exports. Successful rename updates matching history
 entries in the integrated shell. The previous-selection variables mirror the
 first entry, so `kcm -` remains a two-way toggle within the same history.
+
+## Clipboard selection transfer
+
+`kcm copy` validates the active selection and writes a single pasteable command:
+`kcm paste --selection TOKEN`. TOKEN contains versioned canonical JSON encoded
+with base64url and a SHA-256 checksum. The checksum detects accidental corruption;
+it is not an authentication mechanism. Only the fixed command prefix and a
+shell-safe token are emitted, never raw settings paths or context names.
+
+`kcm paste` parses clipboard text as data; it never evaluates clipboard commands.
+Both paths validate token structure, checksum, version, field values, and absolute
+paths, then rediscover the exact context/file under the copied settings. A changed
+server or expired deadline fails before any exports. Success emits the normal
+selection/history updates, then the source's original deadline (including no
+timeout). Namespace remains shared; source history and credentials are not copied.
+All tests use fake clipboard readers/writers, never the user's clipboard.
